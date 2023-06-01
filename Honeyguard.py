@@ -19,10 +19,13 @@ hx711_pdsck_pin = 6
 
 # DS18B20-Konfiguration
 ds18b20_folder = '/sys/bus/w1/devices/'
-ds18b20_file = glob.glob(ds18b20_folder + '28*')[0] + '/w1_slave'
+ds18b20_files = glob.glob(ds18b20_folder + '28*')
 
 # Taster-Konfiguration
 button_pin = 12
+
+# LED-Konfiguration
+led_pin = 16  # GPIO-Pin für die LED
 
 # OLED-Display-Konfiguration
 oled_width = 128
@@ -45,6 +48,10 @@ hx711.tare()
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
+# LED-Konfiguration
+GPIO.setup(led_pin, GPIO.OUT)
+led_status = False  # Status der LED
+
 # OLED-Display initialisieren
 oled = Adafruit_SSD1306.SSD1306_128_64(rst=None)
 oled.begin()
@@ -55,13 +62,14 @@ oled.display()
 font = ImageFont.load_default()
 
 # Funktion zum Anzeigen des Gewichts und der Temperatur auf dem Display
-def display_data(weight, temperature):
+def display_data(weight, temperatures):
     image = Image.new('1', (oled_width, oled_height))
     draw = ImageDraw.Draw(image)
     draw.text((0, 0), 'Gewicht:', font=font, fill=255)
     draw.text((0, 20), '{:.2f} g'.format(weight), font=font, fill=255)
-    draw.text((0, 40), 'Temperatur:', font=font, fill=255)
-    draw.text((0, 60), '{:.2f} °C'.format(temperature), font=font, fill=255)
+    draw.text((0, 40), 'Temperaturen:', font=font, fill=255)
+    for i, temperature in enumerate(temperatures):
+        draw.text((0, 60 + (i * 10)), 'Sensor {}: {:.2f} °C'.format(i+1, temperature), font=font, fill=255)
     oled.image(image)
     oled.display()
 
@@ -82,13 +90,16 @@ while True:
         # Gewicht auslesen
         weight = hx711.get_weight_mean(5)  # Durchschnitt über 5 Messungen
 
-        # DS18B20-Temperatur auslesen
-        with open(ds18b20_file, 'r') as file:
-            lines = file.readlines()
-            temperature_line = lines[1]
-            temperature_start = temperature_line.find('t=') + 2
-            temperature_string = temperature_line[temperature_start:].strip()
-            temperature = float(temperature_string) / 1000.0
+        temperatures = []
+        # DS18B20-Temperaturen auslesen
+        for file in ds18b20_files:
+            with open(file + '/w1_slave', 'r') as f:
+                lines = f.readlines()
+                temperature_line = lines[1]
+                temperature_start = temperature_line.find('t=') + 2
+                temperature_string = temperature_line[temperature_start:].strip()
+                temperature = float(temperature_string) / 1000.0
+                temperatures.append(temperature)
 
         # Aktuelle Zeitstempel erzeugen
         timestamp = int(time.time() * 1000)
@@ -100,16 +111,23 @@ while True:
                 "time": timestamp,
                 "fields": {
                     "weight": weight,
-                    "temperature": temperature
                 }
             }
         ]
+        for i, temperature in enumerate(temperatures):
+            json_body[0]["fields"]["temperature_sensor{}".format(i+1)] = temperature
         client.write_points(json_body)
 
         print("Daten erfolgreich in InfluxDB gespeichert.")
 
-        # Gewicht und Temperatur auf dem OLED-Display anzeigen
-        display_data(weight, temperature)
+        # Gewicht und Temperaturen auf dem OLED-Display anzeigen
+        display_data(weight, temperatures)
+
+        # LED steuern basierend auf dem Wartungsmodus
+        if led_status:
+            GPIO.output(led_pin, GPIO.LOW)
+        else:
+            GPIO.output(led_pin, GPIO.HIGH)
 
     # Tasterstatus überprüfen
     if GPIO.input(button_pin) == GPIO.LOW:
@@ -123,8 +141,10 @@ while True:
                 paused = not paused  # Pause umschalten
                 if paused:
                     display_standby_text()  # "Standby" anzeigen
+                    led_status = True  # LED einschalten
                 else:
-                    display_data(weight, temperature)
+                    display_data(weight, temperatures)
+                    led_status = False  # LED ausschalten
             button_pressed_start_time = 0
     else:
         button_pressed_start_time = 0

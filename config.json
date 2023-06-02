@@ -9,7 +9,8 @@
     "hx711": {
         "dout_pin": 5,
         "pdsck_pin": 6,
-        "scale_ratio": 1
+        "scale_ratio": 1,
+        "tare": -100
     },
     "ds18b20": {
         "folder": "/sys/bus/w1/devices/"

@@ -21,6 +21,7 @@ influx_password = config['influx']['password']
 hx711_dout_pin = config['hx711']['dout_pin']
 hx711_pdsck_pin = config['hx711']['pdsck_pin']
 scale_ratio = config['hx711']['scale_ratio']
+tare = config['hx711']['tare']
 
 # DS18B20-Konfiguration
 ds18b20_folder = config['ds18b20']['folder']
@@ -41,8 +42,9 @@ client.switch_database(influx_db)
 # HX711-Objekt initialisieren
 hx711 = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pdsck_pin)
 
-# Gewichtsfaktor (Kalibrierungsfaktor) einstellen
+# Gewichtsfaktor (Kalibrierungsfaktor) und Tare einstellen
 hx711.set_scale_ratio(scale_ratio)
+hx711.set_tare(tare)
 
 # Taster-Konfiguration
 GPIO.setmode(GPIO.BCM)

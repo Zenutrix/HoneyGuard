@@ -9,7 +9,7 @@
 This guide will walk you through the steps to install HoneyGuard on a Raspberry Pi. HoneyGuard is a monitoring system that captures weight and temperature data using a load cell (HX711), temperature sensors (DS18B20), and an environmental sensor (BME680), and stores the data in an InfluxDB database.
 
 ## Prerequisites
-
+Support me buymeacoffee.com/thomas.austria
 - Raspberry Pi with Raspbian or a compatible operating system
 - Internet connection
 

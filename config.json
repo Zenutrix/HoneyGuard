@@ -19,5 +19,6 @@
     },
     "led": {
         "pin": 16
-    }
+    },
+    "pausenzeit": 1
 }

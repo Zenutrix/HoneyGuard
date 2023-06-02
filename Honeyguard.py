@@ -127,4 +127,4 @@ while True:
         button_pressed_start_time = 0
 
     # Eine Pause einfügen, um die Abfrageintervalle anzupassen
-    time.sleep(1)
+    time.sleep(config['pausenzeit'])

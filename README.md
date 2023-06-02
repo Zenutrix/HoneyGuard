@@ -7,73 +7,106 @@
   <br>
 </h1>
 
-# HoneyGuard Installation Guide
+# HoneyGuard Installation
 
-This guide will walk you through the steps to install HoneyGuard on a Raspberry Pi. HoneyGuard is a monitoring system that captures weight and temperature data using a load cell (HX711), temperature sensors (DS18B20), and an environmental sensor (BME680), and stores the data in an InfluxDB database.
+This guide will help you install and configure HoneyGuard on your Raspberry Pi.
 
 ## Prerequisites
 
-- Raspberry Pi with Raspbian or a compatible operating system
-- Internet connection
+Make sure you have the following components connected to your Raspberry Pi:
+- A/D Converter (HX711) for load cells:
+    - VCC to Pin 02/5V (preferably a 3.3V pin)
+    - GND to Pin 06/Ground
+    - DT to Pin 29/GPIO5
+    - SCK to Pin 31/GPIO6
+- Temperature sensors (DS18B20) for the incubator:
+    - VCC to Pin 17/3.3V
+    - GND to Pin 14/Ground
+    - GPIO11
+- Environmental sensor (BME680) for temperature, humidity, pressure, and air quality:
+    - VCC to Pin 04/5V
+    - GND to Pin 09/Ground
+    - SCK to Pin 05/SCL
+    - SDI to Pin 03/SDA
+- Button for switching between maintenance and measurement mode:
+    - Pin 01/3.3V
+    - GPIO16
+
+Also, make sure that you have an InfluxDB and Grafana instance set up.
 
 ## Installation Steps
 
-1. **Prepare the Raspberry Pi**
-   - Make sure your Raspberry Pi is properly set up and connected to the internet.
-   - Open a terminal on your Raspberry Pi.
+1. Update and upgrade your Raspberry Pi:
+    ```bash
+    sudo apt-get update
+    sudo apt-get upgrade -y
+    ```
 
-2. **Download the Installation Script**
-   - Run the following command to download the installation script:
-     ```
-     wget https://raw.githubusercontent.com/Zenutrix/HoneyGuard/main/install.sh
-     ```
+2. Install the required packages and libraries:
+    ```bash
+    sudo apt-get install -y python3-pip git i2c-tools influxdb jq
+    sudo pip3 install RPi.GPIO influxdb bme680
+    ```
 
-3. **Run the Installation Script**
-   - Give execution permission to the installation script with the following command:
-     ```
-     chmod +x install.sh
-     ```
+3. Clone the HX711 library repository and install it:
+    ```bash
+    git clone https://github.com/tatobari/hx711py.git
+    cd hx711py
+    sudo python3 setup.py install
+    cd ..
+    ```
 
-   - Run the installation script:
-     ```
-     ./install.sh
-     ```
+4. Clone the HoneyGuard repository:
+    ```bash
+    git clone https://github.com/Zenutrix/HoneyGuard.git
+    ```
 
-4. **Enter Configuration Settings**
-   - The installation script will prompt you to enter some configuration settings:
-     - Installation Directory: Enter the path where HoneyGuard should be installed. The default is the user's home directory.
-     - InfluxDB Database Name: Enter the name of the InfluxDB database where the data will be stored. The default is "measured_data".
-     - InfluxDB Username: Enter the username for the InfluxDB user. The default is "your_username".
-     - InfluxDB Password: Enter the password for the InfluxDB user. The password will not be displayed while you type it.
+5. Enable the I2C interface:
+    ```bash
+    sudo raspi-config nonint do_i2c 0
+    ```
 
-5. **Complete the Installation**
-   - The installation script will install the required packages, configure the system, and set up the HoneyGuard service.
-   - Once the installation is complete, start HoneyGuard by running the following command:
-     ```
-     sudo systemctl start honeyguard
-     ```
+6. Configure the HoneyGuard service:
+    ```bash
+    sudo cp HoneyGuard/honeyguard.service /etc/systemd/system/
+    sudo systemctl enable honeyguard.service
+    sudo systemctl start honeyguard.service
+    ```
 
-   - To ensure that HoneyGuard starts automatically on system boot, run the following command:
-     ```
-     sudo systemctl enable honeyguard
-     ```
+7. Create the InfluxDB database and user:
+    ```bash
+    influx -execute "CREATE DATABASE honeyguard"
+    influx -execute "CREATE USER honeyguard WITH PASSWORD 'your_password' WITH ALL PRIVILEGES"
+    ```
 
-6. **Verify the Installation**
-   - Monitor HoneyGuard by viewing the log file:
-     ```
-     sudo journalctl -u honeyguard -f
-     ```
+8. Update the HoneyGuard configuration:
+    - Open the `HoneyGuard/config.json` file.
+    - Update the InfluxDB host, port, database, user, and password.
+    - Save the changes.
 
-   - Check the database connection by logging in to InfluxDB:
-     ```
-     influx
-     ```
+9. Start the InfluxDB and Grafana services:
+    ```bash
+    sudo systemctl start influxdb
+    sudo systemctl enable influxdb
+    sudo systemctl start grafana-server
+    sudo systemctl enable grafana-server
+    ```
 
-   - To customize the HoneyGuard configuration, edit the `config.json` file located in the HoneyGuard installation directory.
+10. Access the Grafana dashboard:
+    - Open a web browser and enter your Raspberry Pi's IP address followed by port `3000` (e.g., `http://<raspberry_pi_ip_address>:3000`).
+    - Log in with the default credentials (username: `admin`, password: `admin`).
+    - Follow the Grafana setup wizard to set a new password and configure data sources.
 
-Congratulations! You have successfully installed HoneyGuard. The system should now capture weight and temperature data and store it in the InfluxDB database. You can explore and visualize the data using InfluxDB and other compatible tools.
+11. You're ready to use HoneyGuard! Make sure all the sensors are properly connected and monitor your beekeeping environment.
 
-For more information and advanced usage, please refer to the HoneyGuard documentation.
+## Usage
 
-Enjoy monitoring your environment with HoneyGuard!
+- The HoneyGuard service will start automatically on boot and continuously monitor the sensors.
+- Use the button connected to GPIO16 to switch between maintenance and measurement modes.
+- The measured data will be stored in the InfluxDB database and can be visualized using the Grafana dashboard.
+
+## Troubleshooting
+
+If you encounter any issues during the installation or usage of HoneyGuard, please refer to the [HoneyGuard GitHub repository](https://github.com/Zenutrix/HoneyGuard) for troubleshooting guidance.
+
 

@@ -2,12 +2,7 @@
 <h1 align="center">
   <br>
   <a href="http://honeyguard.schoepf-tirol.at"><img src="https://honeyguard.schoepf-tirol.at/img/Logo.png" alt="HoneyGuard" width="300"></a>
-  <br>
-  HoneyGuard
-  <br>
-</h1>
-
-# HoneyGuard Installation Guide
+  # HoneyGuard Installation Guide
 
 This guide will walk you through the steps to install HoneyGuard on a Raspberry Pi. HoneyGuard is a monitoring system that captures weight and temperature data using a load cell (HX711), temperature sensors (DS18B20), and an environmental sensor (BME680), and stores the data in an InfluxDB database.
 
@@ -71,7 +66,14 @@ This guide will walk you through the steps to install HoneyGuard on a Raspberry 
 
    - To customize the HoneyGuard configuration, edit the `config.json` file located in the HoneyGuard installation directory.
 
-Congratulations! You have successfully installed HoneyGuard. The system should now capture weight and temperature data and store it in the InfluxDB database. You can explore and visualize the data using InfluxDB and other compatible tools.
+7. **HoneyGuard Features**
+   - HoneyGuard captures weight and temperature data from the load cell and DS18B20 temperature sensors.
+   - It also measures environmental parameters such as temperature, humidity, pressure, and air quality using the BME680 sensor.
+   - The data is stored in an InfluxDB database, allowing you to analyze and visualize the data.
+   - For visualizing the data, you can use Grafana, a powerful open-source platform for data visualization.
+   - Set up Grafana by accessing the Grafana web interface and configuring it to connect to your InfluxDB database.
+
+Congratulations! You have successfully installed HoneyGuard. The system should now capture weight, temperature, and environmental data and store it in the InfluxDB database. You can explore and visualize the data using Grafana and other compatible tools.
 
 For more information and advanced usage, please refer to the HoneyGuard documentation.
 

@@ -2,7 +2,9 @@
 <h1 align="center">
   <br>
   <a href="http://honeyguard.schoepf-tirol.at"><img src="https://honeyguard.schoepf-tirol.at/img/Logo.png" alt="HoneyGuard" width="300"></a>
-  # HoneyGuard Installation Guide
+</h1>
+
+# HoneyGuard Installation Guide
 
 This guide will walk you through the steps to install HoneyGuard on a Raspberry Pi. HoneyGuard is a monitoring system that captures weight and temperature data using a load cell (HX711), temperature sensors (DS18B20), and an environmental sensor (BME680), and stores the data in an InfluxDB database.
 

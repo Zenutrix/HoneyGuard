@@ -1,0 +1,23 @@
+{
+    "influx": {
+        "host": "localhost",
+        "port": 8086,
+        "db": "measured_data",
+        "user": "your_username",
+        "password": "your_password"
+    },
+    "hx711": {
+        "dout_pin": 5,
+        "pdsck_pin": 6,
+        "scale_ratio": 1
+    },
+    "ds18b20": {
+        "folder": "/sys/bus/w1/devices/"
+    },
+    "button": {
+        "pin": 12
+    },
+    "led": {
+        "pin": 16
+    }
+}

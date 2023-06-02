@@ -2,34 +2,37 @@ from influxdb import InfluxDBClient
 from hx711 import HX711
 import time
 import RPi.GPIO as GPIO
-import Adafruit_SSD1306
-from PIL import Image, ImageDraw, ImageFont
 import glob
+import json
+import bme680
+
+# Lade die Konfiguration aus der JSON-Datei
+with open('config.json') as f:
+    config = json.load(f)
 
 # InfluxDB-Konfiguration
-influx_host = 'localhost'
-influx_port = 8086
-influx_db = 'measured_data'
-influx_user = 'your_username'
-influx_password = 'your_password'
+influx_host = config['influx']['host']
+influx_port = config['influx']['port']
+influx_db = config['influx']['db']
+influx_user = config['influx']['user']
+influx_password = config['influx']['password']
 
 # HX711-Konfiguration
-hx711_dout_pin = 5
-hx711_pdsck_pin = 6
+hx711_dout_pin = config['hx711']['dout_pin']
+hx711_pdsck_pin = config['hx711']['pdsck_pin']
+scale_ratio = config['hx711']['scale_ratio']
 
 # DS18B20-Konfiguration
-ds18b20_folder = '/sys/bus/w1/devices/'
-ds18b20_files = glob.glob(ds18b20_folder + '28*')
+ds18b20_folder = config['ds18b20']['folder']
 
 # Taster-Konfiguration
-button_pin = 12
+button_pin = config['button']['pin']
 
 # LED-Konfiguration
-led_pin = 16  # GPIO-Pin für die LED
+led_pin = config['led']['pin']
 
-# OLED-Display-Konfiguration
-oled_width = 128
-oled_height = 64
+# BME680 Sensor initialisieren
+sensor = bme680.BME680()
 
 # InfluxDB-Client initialisieren
 client = InfluxDBClient(host=influx_host, port=influx_port, username=influx_user, password=influx_password)
@@ -39,10 +42,7 @@ client.switch_database(influx_db)
 hx711 = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pdsck_pin)
 
 # Gewichtsfaktor (Kalibrierungsfaktor) einstellen
-hx711.set_scale(1)  # Passen Sie den Faktor entsprechend an
-
-# TARA-Gewicht einstellen (Optionaler Schritt)
-hx711.tare()
+hx711.set_scale_ratio(scale_ratio)
 
 # Taster-Konfiguration
 GPIO.setmode(GPIO.BCM)
@@ -52,35 +52,6 @@ GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(led_pin, GPIO.OUT)
 led_status = False  # Status der LED
 
-# OLED-Display initialisieren
-oled = Adafruit_SSD1306.SSD1306_128_64(rst=None)
-oled.begin()
-oled.clear()
-oled.display()
-
-# Schriftart für den Text auf dem Display
-font = ImageFont.load_default()
-
-# Funktion zum Anzeigen des Gewichts und der Temperatur auf dem Display
-def display_data(weight, temperatures):
-    image = Image.new('1', (oled_width, oled_height))
-    draw = ImageDraw.Draw(image)
-    draw.text((0, 0), 'Gewicht:', font=font, fill=255)
-    draw.text((0, 20), '{:.2f} g'.format(weight), font=font, fill=255)
-    draw.text((0, 40), 'Temperaturen:', font=font, fill=255)
-    for i, temperature in enumerate(temperatures):
-        draw.text((0, 60 + (i * 10)), 'Sensor {}: {:.2f} °C'.format(i+1, temperature), font=font, fill=255)
-    oled.image(image)
-    oled.display()
-
-# Standby-Text auf dem Display anzeigen
-def display_standby_text():
-    image = Image.new('1', (oled_width, oled_height))
-    draw = ImageDraw.Draw(image)
-    draw.text((0, 0), 'Standby', font=font, fill=255)
-    oled.image(image)
-    oled.display()
-
 paused = False  # Status der Pause
 button_pressed_start_time = 0  # Zeitpunkt des Tastendrucks
 button_press_count = 0  # Anzahl der Knopfdrücke
@@ -88,7 +59,7 @@ button_press_count = 0  # Anzahl der Knopfdrücke
 while True:
     if not paused:
         # Gewicht auslesen
-        weight = hx711.get_weight_mean(5)  # Durchschnitt über 5 Messungen
+        weight = hx711.get_weight_mean(5)
 
         temperatures = []
         # DS18B20-Temperaturen auslesen
@@ -101,6 +72,13 @@ while True:
                 temperature = float(temperature_string) / 1000.0
                 temperatures.append(temperature)
 
+        # BME680 Sensorwerte auslesen
+        if sensor.get_sensor_data():
+            bme680_temperature = sensor.data.temperature
+            bme680_pressure = sensor.data.pressure
+            bme680_humidity = sensor.data.humidity
+            bme680_air_quality = sensor.data.air_quality_score
+
         # Aktuelle Zeitstempel erzeugen
         timestamp = int(time.time() * 1000)
 
@@ -111,6 +89,10 @@ while True:
                 "time": timestamp,
                 "fields": {
                     "weight": weight,
+                    "bme680_temperature": bme680_temperature,
+                    "bme680_pressure": bme680_pressure,
+                    "bme680_humidity": bme680_humidity,
+                    "bme680_air_quality": bme680_air_quality,
                 }
             }
         ]
@@ -119,9 +101,6 @@ while True:
         client.write_points(json_body)
 
         print("Daten erfolgreich in InfluxDB gespeichert.")
-
-        # Gewicht und Temperaturen auf dem OLED-Display anzeigen
-        display_data(weight, temperatures)
 
         # LED steuern basierend auf dem Wartungsmodus
         if led_status:
@@ -140,14 +119,12 @@ while True:
                 button_press_count = 0  # Zurücksetzen der Zählung
                 paused = not paused  # Pause umschalten
                 if paused:
-                    display_standby_text()  # "Standby" anzeigen
                     led_status = True  # LED einschalten
                 else:
-                    display_data(weight, temperatures)
                     led_status = False  # LED ausschalten
             button_pressed_start_time = 0
     else:
         button_pressed_start_time = 0
 
     # Eine Pause einfügen, um die Abfrageintervalle anzupassen
-    time.sleep(1)  # Zum Beispiel 1 Sekunde Pause zwischen den Abfragen
+    time.sleep(1)

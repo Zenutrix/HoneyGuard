@@ -31,6 +31,12 @@ This guide will walk you through the steps to install HoneyGuard on a Raspberry 
 
 3. **Run the Installation Script**
    - Give execution permission to the installation script with the following command:
+    ```
+     wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+    ```
+    ```
+     echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
+     ```
      ```
      sudo python3 setup.py
      ```

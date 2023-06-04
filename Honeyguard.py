@@ -106,29 +106,44 @@ while True:
         timestamp = int(time.time() * 1000)
 
         # Messdaten in InfluxDB speichern, nur wenn mindestens ein Sensor aktiviert ist
-        if weight is not None or temperatures or bme680_temperature is not None:
-            json_body = [
-                {
-                    "measurement": "weight_temperature",
-                    "time": timestamp,
-                    "fields": {}
+        if weight is not None:
+            weight_json = {
+                "measurement": "weight",
+                "time": timestamp,
+                "fields": {
+                    "value": weight
                 }
-            ]
-            if weight is not None:
-                json_body[0]["fields"]["weight"] = weight
-            if bme680_temperature is not None:
-                json_body[0]["fields"]["bme680_temperature"] = bme680_temperature
-            if bme680_pressure is not None:
-                json_body[0]["fields"]["bme680_pressure"] = bme680_pressure
-            if bme680_humidity is not None:
-                json_body[0]["fields"]["bme680_humidity"] = bme680_humidity
-            if bme680_air_quality is not None:
-                json_body[0]["fields"]["bme680_air_quality"] = bme680_air_quality
-            for i, temperature in enumerate(temperatures):
-                json_body[0]["fields"]["temperature_sensor{}".format(i+1)] = temperature
-            client.write_points(json_body)
+            }
+            client.write_points([weight_json])
 
-            print("Daten erfolgreich in InfluxDB gespeichert.")
+            print("Gewicht erfolgreich in InfluxDB gespeichert.")
+
+        for i, temperature in enumerate(temperatures):
+            temp_json = {
+                "measurement": "temperature_sensor{}".format(i+1),
+                "time": timestamp,
+                "fields": {
+                    "value": temperature
+                }
+            }
+            client.write_points([temp_json])
+
+            print("Temperatur Sensor {} erfolgreich in InfluxDB gespeichert.".format(i+1))
+
+        if bme680_temperature is not None:
+            bme680_json = {
+                "measurement": "bme680",
+                "time": timestamp,
+                "fields": {
+                    "temperature": bme680_temperature,
+                    "pressure": bme680_pressure,
+                    "humidity": bme680_humidity,
+                    "air_quality": bme680_air_quality
+                }
+            }
+            client.write_points([bme680_json])
+
+            print("BME680-Daten erfolgreich in InfluxDB gespeichert.")
 
         # LED steuern basierend auf dem Wartungsmodus
         if led_status:

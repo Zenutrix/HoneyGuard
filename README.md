@@ -32,12 +32,7 @@ This guide will walk you through the steps to install HoneyGuard on a Raspberry 
 3. **Run the Installation Script**
    - Give execution permission to the installation script with the following command:
      ```
-     chmod +x setup.py
-     ```
-
-   - Run the installation script:
-     ```
-     python3 install.sh
+     sudo python3 setup.py
      ```
 
 4. **Enter Configuration Settings**

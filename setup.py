@@ -79,16 +79,15 @@ subprocess.run(["sudo", "systemctl", "enable", "honeyguard"])
 
 # Installation von Grafana
 print_status("Installiere Grafana...")
-subprocess.run(["wget", "-q", "https://packages.grafana.com/gpg.key", "-O", "/tmp/grafana-key.gpg"])
-subprocess.run(["sudo", "apt-key", "add", "/tmp/grafana-key.gpg"])
-subprocess.run(["sudo", "sh", "-c", "'echo deb https://packages.grafana.com/oss/deb stable main > /etc/apt/sources.list.d/grafana.list'"])
+subprocess.run(["wget", "-q", "-O", "-", "https://packages.grafana.com/gpg.key", "|", "sudo", "apt-key", "add", "-"])
+subprocess.run(["echo", "'deb", "https://packages.grafana.com/oss/deb", "stable", "main'", "|", "sudo", "tee", "-a", "/etc/apt/sources.list.d/grafana.list"])
 subprocess.run(["sudo", "apt-get", "update"])
 subprocess.run(["sudo", "apt-get", "install", "-y", "grafana"])
 
 # Starten von Grafana
 print_status("Starte Grafana-Dienst...")
-subprocess.run(["sudo", "systemctl", "start", "grafana-server"])
-subprocess.run(["sudo", "systemctl", "enable", "grafana-server"])
+subprocess.run(["sudo", "/bin/systemctl", "start", "grafana-server"])
+subprocess.run(["sudo", "/bin/systemctl", "enable", "grafana-server"])
 
 # Abschluss der Installation
 print("Installation abgeschlossen.")

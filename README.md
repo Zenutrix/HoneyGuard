@@ -1,7 +1,7 @@
 
 <h1 align="center">
   <br>
-  <a href="http://honeyguard.schoepf-tirol.at"><img src="https://honeyguard.schoepf-tirol.at/img/Logo.png" alt="HoneyGuard" width="300"></a>
+  <a href="http://honeyguard.schoepf-tirol.at"><img src="https://honeyguard.schoepf-tirol.at/img/Logow.png" alt="HoneyGuard" width="300"></a>
 </h1>
 
 ## Support

@@ -45,6 +45,10 @@ if bme680_enabled:
 
 # InfluxDB-Client initialisieren
 client = InfluxDBClient(host=influx_host, port=influx_port)
+
+# Datenbank erstellen, falls sie nicht existiert
+if influx_db not in client.get_list_database():
+    client.create_database(influx_db)
 client.switch_database(influx_db)
 
 # HX711-Objekt initialisieren

@@ -64,8 +64,8 @@ Description=HoneyGuard Service
 After=multi-user.target
 
 [Service]
-ExecStart=/usr/bin/python3 {install_dir}honeyguard.py
-WorkingDirectory={install_dir}
+ExecStart=/usr/bin/python3 {install_dir}Honeyguard.py
+WorkingDirectory=/home/pi/HoneyGuard/
 Restart=always
 
 [Install]

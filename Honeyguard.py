@@ -58,49 +58,62 @@ button_press_count = 0  # Anzahl der Knopfdrücke
 
 while True:
     if not paused:
-        # Gewicht auslesen
-        weight = hx711.get_weight_mean(5)
+        # Gewicht auslesen, wenn der HX711-Sensor angeschlossen ist
+        weight = hx711.get_weight_mean(5) if hx711.is_ready() else None
 
         temperatures = []
-        # DS18B20-Temperaturen auslesen
+        # DS18B20-Temperaturen auslesen, nur wenn Sensoren angeschlossen sind
+        ds18b20_files = glob.glob(ds18b20_folder + '/28-*')
         for file in ds18b20_files:
             with open(file + '/w1_slave', 'r') as f:
                 lines = f.readlines()
-                temperature_line = lines[1]
-                temperature_start = temperature_line.find('t=') + 2
-                temperature_string = temperature_line[temperature_start:].strip()
-                temperature = float(temperature_string) / 1000.0
-                temperatures.append(temperature)
+                crc_check = lines[0].strip()[-3:]
+                if crc_check == 'YES':
+                    temperature_line = lines[1]
+                    temperature_start = temperature_line.find('t=') + 2
+                    temperature_string = temperature_line[temperature_start:].strip()
+                    temperature = float(temperature_string) / 1000.0
+                    temperatures.append(temperature)
 
-        # BME680 Sensorwerte auslesen
-        if sensor.get_sensor_data():
+        # BME680 Sensorwerte auslesen, nur wenn der Sensor angeschlossen ist
+        if sensor.get_sensor_data() and sensor.data.heat_stable:
             bme680_temperature = sensor.data.temperature
             bme680_pressure = sensor.data.pressure
             bme680_humidity = sensor.data.humidity
             bme680_air_quality = sensor.data.air_quality_score
+        else:
+            bme680_temperature = None
+            bme680_pressure = None
+            bme680_humidity = None
+            bme680_air_quality = None
 
         # Aktuelle Zeitstempel erzeugen
         timestamp = int(time.time() * 1000)
 
-        # Messdaten in InfluxDB speichern
-        json_body = [
-            {
-                "measurement": "weight_temperature",
-                "time": timestamp,
-                "fields": {
-                    "weight": weight,
-                    "bme680_temperature": bme680_temperature,
-                    "bme680_pressure": bme680_pressure,
-                    "bme680_humidity": bme680_humidity,
-                    "bme680_air_quality": bme680_air_quality,
+        # Messdaten in InfluxDB speichern, nur wenn mindestens ein Sensor angeschlossen ist
+        if weight is not None or temperatures or bme680_temperature is not None:
+            json_body = [
+                {
+                    "measurement": "weight_temperature",
+                    "time": timestamp,
+                    "fields": {}
                 }
-            }
-        ]
-        for i, temperature in enumerate(temperatures):
-            json_body[0]["fields"]["temperature_sensor{}".format(i+1)] = temperature
-        client.write_points(json_body)
+            ]
+            if weight is not None:
+                json_body[0]["fields"]["weight"] = weight
+            if bme680_temperature is not None:
+                json_body[0]["fields"]["bme680_temperature"] = bme680_temperature
+            if bme680_pressure is not None:
+                json_body[0]["fields"]["bme680_pressure"] = bme680_pressure
+            if bme680_humidity is not None:
+                json_body[0]["fields"]["bme680_humidity"] = bme680_humidity
+            if bme680_air_quality is not None:
+                json_body[0]["fields"]["bme680_air_quality"] = bme680_air_quality
+            for i, temperature in enumerate(temperatures):
+                json_body[0]["fields"]["temperature_sensor{}".format(i+1)] = temperature
+            client.write_points(json_body)
 
-        print("Daten erfolgreich in InfluxDB gespeichert.")
+            print("Daten erfolgreich in InfluxDB gespeichert.")
 
         # LED steuern basierend auf dem Wartungsmodus
         if led_status:

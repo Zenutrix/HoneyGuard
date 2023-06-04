@@ -21,6 +21,10 @@ Das Hauptziel von HoneyGuard besteht darin, eine umfassende Überwachungslösung
 - Adafruit BME680 (Sensor für Temperatur, Luftfeuchtigkeit, Luftdruck und VOC / Gassensoren)
 - Widerstände
 
+## Einkaufsliste
+
+Besuchen Sie unsere [Website](http://honeyguard.schoepf-tirol.at) für eine vollständige Einkaufsliste mit den benötigten Komponenten.
+
 ## Installations-Schritte
 
 1. **Raspberry Pi vorbereiten**
@@ -57,11 +61,16 @@ Das Hauptziel von HoneyGuard besteht darin, eine umfassende Überwachungslösung
 
 5. **HoneyGuard-Dienst starten/Status anzeigen**
    - Das Installations-Skript installiert die erforderlichen Pakete, konfiguriert das System und richtet den HoneyGuard-Dienst ein.
-   - Starten Sie HoneyGuard nach Abschluss der Installation mit dem folgenden Befehl:
+   - Sobald die Installation abgeschlossen ist, starten Sie HoneyGuard mit dem folgenden Befehl:
      ```
      sudo systemctl start honeyguard
      ```
 
    - Um die HoneyGuard-Konfiguration anzupassen, bearbeiten Sie die Datei `config.json`, die sich im HoneyGuard-Installationsverzeichnis befindet.
 
-Viel Spaß mit der Überwachung mit HoneyGuard!
+7. **HoneyGuard-Konfiguration anpassen**
+
+   - Um die HoneyGuard-Konfiguration anzupassen, bearbeiten Sie die Datei `config.json`, die sich im HoneyGuard-Installationsverzeichnis befindet.
+
+Viel Spaß mit der Überwachung Ihrer Bienen mit HoneyGuard!
+

@@ -72,13 +72,17 @@ with open('/etc/systemd/system/honeyguard.service', 'w') as f:
 print_status("Setze Berechtigungen für den Dienst...")
 subprocess.run(["sudo", "chmod", "644", "/etc/systemd/system/honeyguard.service"])
 
-# Starten des HoneyGuard-Dienstes und Aktivieren beim Booten
+# Starten des HoneyGuard-Dienstes und Aktivieren beim Boot
 print_status("Starte HoneyGuard-Dienst und aktiviere Autostart...")
 subprocess.run(["sudo", "systemctl", "start", "honeyguard"])
 subprocess.run(["sudo", "systemctl", "enable", "honeyguard"])
 
 # Installation von Grafana
 print_status("Installiere Grafana...")
+subprocess.run(["wget", "-q", "https://packages.grafana.com/gpg.key", "-O", "/tmp/grafana-key.gpg"])
+subprocess.run(["sudo", "apt-key", "add", "/tmp/grafana-key.gpg"])
+subprocess.run(["sudo", "sh", "-c", "'echo deb https://packages.grafana.com/oss/deb stable main > /etc/apt/sources.list.d/grafana.list'"])
+subprocess.run(["sudo", "apt-get", "update"])
 subprocess.run(["sudo", "apt-get", "install", "-y", "grafana"])
 
 # Starten von Grafana

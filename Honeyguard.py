@@ -57,9 +57,6 @@ if influx_db not in client.get_list_database():
     client.create_database(influx_db)
 client.switch_database(influx_db)
 
-# Logger aktivieren
-client.enable_logger(logger)
-
 # HX711-Objekt initialisieren
 hx711 = None
 if hx711_enabled:

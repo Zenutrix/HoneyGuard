@@ -5,7 +5,6 @@ import RPi.GPIO as GPIO
 import glob
 import json
 import bme680
-import os
 
 # Lade die Konfiguration aus der JSON-Datei
 with open('config.json') as f:
@@ -52,6 +51,9 @@ if influx_db not in client.get_list_database():
     client.create_database(influx_db)
 client.switch_database(influx_db)
 
+# Logger aktivieren
+client.enable_logger()
+
 # HX711-Objekt initialisieren
 hx711 = None
 if hx711_enabled:
@@ -71,29 +73,6 @@ paused = False  # Status der Pause
 button_pressed_start_time = 0  # Zeitpunkt des Tastendrucks
 button_press_count = 0  # Anzahl der Knopfdrücke
 
-# Funktion zum Auslesen der Temperatur
-def read_temperature():
-    # Pfad zum Sensor
-    sensor_folder = glob.glob('/sys/bus/w1/devices/28-*')[0]
-    sensor_path = os.path.join(sensor_folder, 'w1_slave')
-
-    # Sensor auslesen
-    with open(sensor_path, 'r') as file:
-        lines = file.readlines()
-
-    # Überprüfen, ob das Auslesen erfolgreich war
-    if lines[0].strip()[-3:] == 'YES':
-        # Temperatur extrahieren und konvertieren
-        equals_pos = lines[1].find('t=')
-        if equals_pos != -1:
-            temperature_string = lines[1][equals_pos+2:]
-            temperature = float(temperature_string) / 1000.0
-            return temperature
-    else:
-        # Fehler beim Auslesen
-        return None
-
-# Hauptprogramm
 while True:
     if not paused:
         # Gewicht auslesen, wenn der HX711-Sensor aktiviert ist

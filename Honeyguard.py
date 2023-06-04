@@ -14,8 +14,6 @@ with open('config.json') as f:
 influx_host = config['influx']['host']
 influx_port = config['influx']['port']
 influx_db = config['influx']['db']
-influx_user = config['influx']['user']
-influx_password = config['influx']['password']
 
 # HX711-Konfiguration
 hx711_dout_pin = config['hx711']['dout_pin']
@@ -36,7 +34,7 @@ led_pin = config['led']['pin']
 sensor = bme680.BME680()
 
 # InfluxDB-Client initialisieren
-client = InfluxDBClient(host=influx_host, port=influx_port, username=influx_user, password=influx_password)
+client = InfluxDBClient(host=influx_host, port=influx_port)
 client.switch_database(influx_db)
 
 # HX711-Objekt initialisieren

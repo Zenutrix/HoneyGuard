@@ -26,26 +26,29 @@ This guide will walk you through the steps to install HoneyGuard on a Raspberry 
 2. **Download the Installation Script**
    - Run the following command to download the installation script:
      ```
-     wget https://raw.githubusercontent.com/Zenutrix/HoneyGuard/main/install.sh
+     wget https://raw.githubusercontent.com/Zenutrix/HoneyGuard/main/setup.py
      ```
 
 3. **Run the Installation Script**
    - Give execution permission to the installation script with the following command:
      ```
-     chmod +x install.sh
+     chmod +x setup.py
      ```
 
    - Run the installation script:
      ```
-     ./install.sh
+     python3 install.sh
      ```
 
 4. **Enter Configuration Settings**
-   - The installation script will prompt you to enter some configuration settings:
-     - Installation Directory: Enter the path where HoneyGuard should be installed. The default is the user's home directory.
-     - InfluxDB Database Name: Enter the name of the InfluxDB database where the data will be stored. The default is "measured_data".
-     - InfluxDB Username: Enter the username for the InfluxDB user. The default is "your_username".
-     - InfluxDB Password: Enter the password for the InfluxDB user. The password will not be displayed while you type it.
+     ```
+     sudo nano /home/pi/Honeyguard/config.json
+     ```
+   - Edit Database Name what you want.
+   - Edit Tare
+   - Edit GPO Pins you want or Default
+   - 
+     - 
 
 5. **Complete the Installation**
    - The installation script will install the required packages, configure the system, and set up the HoneyGuard service.

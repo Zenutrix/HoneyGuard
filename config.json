@@ -2,9 +2,7 @@
     "influx": {
         "host": "localhost",
         "port": 8086,
-        "db": "measured_data",
-        "user": "your_username",
-        "password": "your_password"
+        "db": "measured_data"
     },
     "hx711": {
         "dout_pin": 5,

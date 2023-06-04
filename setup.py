@@ -13,6 +13,12 @@ subprocess.run(["sudo", "apt-get", "update"])
 print_status("Upgrade aller installierten Pakete...")
 subprocess.run(["sudo", "apt-get", "upgrade", "-y"])
 
+# Aktiviere GPIO Pins in /boot/config.txt
+print_status("Aktiviere GPIO Pins...")
+with open('/boot/config.txt', 'a') as f:
+    f.write('dtoverlay=w1-gpio,gpiopin=11\n')
+    f.write('dtoverlay=i2c-gpio,bus=3,i2c_gpio_delay_us=1,i2c_gpio_sda=3,i2c_gpio_scl=5\n')
+
 # Installieren der notwendigen Pakete für den HX711 Sensor und BME680
 print_status("Installiere benötigte Pakete...")
 subprocess.run(["sudo", "apt-get", "install", "-y", "python3-pip", "git", "i2c-tools", "influxdb", "jq"])

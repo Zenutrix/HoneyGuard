@@ -6,6 +6,7 @@ import json
 import bme680
 from influxdb import InfluxDBClient
 from hx711 import HX711
+from datetime import datetime  # Hinzugefügt
 
 # Lade die Konfiguration aus der JSON-Datei
 with open('config.json') as f:
@@ -108,7 +109,7 @@ while True:
                 bme680_air_quality = sensor.data.air_quality_score
 
         # Aktuelle Zeitstempel erzeugen
-        timestamp = int(time.time() * 1000)
+        timestamp = datetime.now().isoformat()  # Geändert
 
         # Messdaten in InfluxDB speichern, nur wenn mindestens ein Sensor aktiviert ist
         if weight is not None:

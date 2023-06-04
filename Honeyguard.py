@@ -5,6 +5,12 @@ import RPi.GPIO as GPIO
 import glob
 import json
 import bme680
+import logging
+
+# Set up logging
+logging.basicConfig(filename='sensor.log', level=logging.DEBUG,
+                    format='%(asctime)s %(levelname)s %(name)s %(message)s')
+logger = logging.getLogger(__name__)
 
 # Lade die Konfiguration aus der JSON-Datei
 with open('config.json') as f:
@@ -41,7 +47,7 @@ if bme680_enabled:
     try:
         sensor = bme680.BME680()
     except Exception as e:
-        print("Fehler beim Initialisieren des BME680-Sensors:", str(e))
+        logger.error("Fehler beim Initialisieren des BME680-Sensors:", str(e))
 
 # InfluxDB-Client initialisieren
 client = InfluxDBClient(host=influx_host, port=influx_port)
@@ -52,7 +58,7 @@ if influx_db not in client.get_list_database():
 client.switch_database(influx_db)
 
 # Logger aktivieren
-client.enable_logger()
+client.enable_logger(logger)
 
 # HX711-Objekt initialisieren
 hx711 = None
@@ -77,6 +83,7 @@ while True:
     if not paused:
         # Gewicht auslesen, wenn der HX711-Sensor aktiviert ist
         weight = hx711.get_weight_mean(5) if hx711 and hx711.is_ready() else None
+        logger.debug("Weight: %s", weight)
 
         temperatures = []
         # DS18B20-Temperaturen auslesen, nur wenn Sensoren aktiviert sind
@@ -92,6 +99,7 @@ while True:
                         temperature_string = temperature_line[temperature_start:].strip()
                         temperature = float(temperature_string) / 1000.0
                         temperatures.append(temperature)
+                logger.debug("DS18B20 temperature: %s", temperatures)
 
         # BME680 Sensorwerte auslesen, nur wenn der Sensor aktiviert ist
         bme680_temperature = None
@@ -104,6 +112,8 @@ while True:
                 bme680_pressure = sensor.data.pressure
                 bme680_humidity = sensor.data.humidity
                 bme680_air_quality = sensor.data.air_quality_score
+                logger.debug("BME680 sensor data: Temperature=%s, Pressure=%s, Humidity=%s, Air Quality=%s",
+                             bme680_temperature, bme680_pressure, bme680_humidity, bme680_air_quality)
 
         # Aktuelle Zeitstempel erzeugen
         timestamp = int(time.time() * 1000)
@@ -118,8 +128,7 @@ while True:
                 }
             }
             client.write_points([weight_json])
-
-            print("Gewicht erfolgreich in InfluxDB gespeichert.")
+            logger.info("Gewicht erfolgreich in InfluxDB gespeichert.")
 
         for i, temperature in enumerate(temperatures):
             temp_json = {
@@ -130,8 +139,7 @@ while True:
                 }
             }
             client.write_points([temp_json])
-
-            print("Temperatur Sensor {} erfolgreich in InfluxDB gespeichert.".format(i+1))
+            logger.info("Temperatur Sensor {} erfolgreich in InfluxDB gespeichert.".format(i+1))
 
         if bme680_temperature is not None:
             bme680_json = {
@@ -145,14 +153,14 @@ while True:
                 }
             }
             client.write_points([bme680_json])
-
-            print("BME680-Daten erfolgreich in InfluxDB gespeichert.")
+            logger.info("BME680-Daten erfolgreich in InfluxDB gespeichert.")
 
         # LED steuern basierend auf dem Wartungsmodus
         if led_status:
             GPIO.output(led_pin, GPIO.LOW)
         else:
             GPIO.output(led_pin, GPIO.HIGH)
+        logger.debug("LED status: %s", not led_status)
 
     # Tasterstatus überprüfen
     if GPIO.input(button_pin) == GPIO.LOW:
@@ -169,6 +177,8 @@ while True:
                 else:
                     led_status = False  # LED ausschalten
             button_pressed_start_time = 0
+            logger.debug("Button press count: %s", button_press_count)
+            logger.debug("Paused status: %s", paused)
     else:
         button_pressed_start_time = 0
 

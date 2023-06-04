@@ -16,13 +16,18 @@ influx_port = config['influx']['port']
 influx_db = config['influx']['db']
 
 # HX711-Konfiguration
+hx711_enabled = config['hx711']['enabled']
 hx711_dout_pin = config['hx711']['dout_pin']
 hx711_pdsck_pin = config['hx711']['pdsck_pin']
 scale_ratio = config['hx711']['scale_ratio']
 tare = config['hx711']['tare']
 
 # DS18B20-Konfiguration
+ds18b20_enabled = config['ds18b20']['enabled']
 ds18b20_folder = config['ds18b20']['folder']
+
+# BME680-Konfiguration
+bme680_enabled = config.get('bme680', {}).get('enabled', False)
 
 # Taster-Konfiguration
 button_pin = config['button']['pin']
@@ -31,18 +36,23 @@ button_pin = config['button']['pin']
 led_pin = config['led']['pin']
 
 # BME680 Sensor initialisieren
-sensor = bme680.BME680()
+sensor = None
+if bme680_enabled:
+    try:
+        sensor = bme680.BME680()
+    except Exception as e:
+        print("Fehler beim Initialisieren des BME680-Sensors:", str(e))
 
 # InfluxDB-Client initialisieren
 client = InfluxDBClient(host=influx_host, port=influx_port)
 client.switch_database(influx_db)
 
 # HX711-Objekt initialisieren
-hx711 = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pdsck_pin)
-
-# Gewichtsfaktor (Kalibrierungsfaktor) und Tare einstellen
-hx711.set_scale_ratio(scale_ratio)
-hx711.set_tare(tare)
+hx711 = None
+if hx711_enabled:
+    hx711 = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pdsck_pin)
+    hx711.set_scale_ratio(scale_ratio)
+    hx711.set_tare(tare)
 
 # Taster-Konfiguration
 GPIO.setmode(GPIO.BCM)
@@ -58,39 +68,40 @@ button_press_count = 0  # Anzahl der Knopfdrücke
 
 while True:
     if not paused:
-        # Gewicht auslesen, wenn der HX711-Sensor angeschlossen ist
-        weight = hx711.get_weight_mean(5) if hx711.is_ready() else None
+        # Gewicht auslesen, wenn der HX711-Sensor aktiviert ist
+        weight = hx711.get_weight_mean(5) if hx711 and hx711.is_ready() else None
 
         temperatures = []
-        # DS18B20-Temperaturen auslesen, nur wenn Sensoren angeschlossen sind
-        ds18b20_files = glob.glob(ds18b20_folder + '/28-*')
-        for file in ds18b20_files:
-            with open(file + '/w1_slave', 'r') as f:
-                lines = f.readlines()
-                crc_check = lines[0].strip()[-3:]
-                if crc_check == 'YES':
-                    temperature_line = lines[1]
-                    temperature_start = temperature_line.find('t=') + 2
-                    temperature_string = temperature_line[temperature_start:].strip()
-                    temperature = float(temperature_string) / 1000.0
-                    temperatures.append(temperature)
+        # DS18B20-Temperaturen auslesen, nur wenn Sensoren aktiviert sind
+        if ds18b20_enabled:
+            ds18b20_files = glob.glob(ds18b20_folder + '/28-*')
+            for file in ds18b20_files:
+                with open(file + '/w1_slave', 'r') as f:
+                    lines = f.readlines()
+                    crc_check = lines[0].strip()[-3:]
+                    if crc_check == 'YES':
+                        temperature_line = lines[1]
+                        temperature_start = temperature_line.find('t=') + 2
+                        temperature_string = temperature_line[temperature_start:].strip()
+                        temperature = float(temperature_string) / 1000.0
+                        temperatures.append(temperature)
 
-        # BME680 Sensorwerte auslesen, nur wenn der Sensor angeschlossen ist
-        if sensor.get_sensor_data() and sensor.data.heat_stable:
-            bme680_temperature = sensor.data.temperature
-            bme680_pressure = sensor.data.pressure
-            bme680_humidity = sensor.data.humidity
-            bme680_air_quality = sensor.data.air_quality_score
-        else:
-            bme680_temperature = None
-            bme680_pressure = None
-            bme680_humidity = None
-            bme680_air_quality = None
+        # BME680 Sensorwerte auslesen, nur wenn der Sensor aktiviert ist
+        bme680_temperature = None
+        bme680_pressure = None
+        bme680_humidity = None
+        bme680_air_quality = None
+        if sensor:
+            if sensor.get_sensor_data() and sensor.data.heat_stable:
+                bme680_temperature = sensor.data.temperature
+                bme680_pressure = sensor.data.pressure
+                bme680_humidity = sensor.data.humidity
+                bme680_air_quality = sensor.data.air_quality_score
 
         # Aktuelle Zeitstempel erzeugen
         timestamp = int(time.time() * 1000)
 
-        # Messdaten in InfluxDB speichern, nur wenn mindestens ein Sensor angeschlossen ist
+        # Messdaten in InfluxDB speichern, nur wenn mindestens ein Sensor aktiviert ist
         if weight is not None or temperatures or bme680_temperature is not None:
             json_body = [
                 {

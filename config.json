@@ -5,13 +5,18 @@
         "db": "honeyguard"
     },
     "hx711": {
+        "enabled": false,
         "dout_pin": 5,
         "pdsck_pin": 6,
         "scale_ratio": 1,
         "tare": -100
     },
     "ds18b20": {
+        "enabled": true,
         "folder": "/sys/bus/w1/devices/"
+    },
+    "bme680": {
+        "enabled": false
     },
     "button": {
         "pin": 12

@@ -2,7 +2,7 @@
     "influx": {
         "host": "localhost",
         "port": 8086,
-        "db": "measured_data"
+        "db": "honeyguard"
     },
     "hx711": {
         "dout_pin": 5,

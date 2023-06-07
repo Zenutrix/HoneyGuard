@@ -3,7 +3,7 @@ import os
 
 # Funktion zum Anzeigen des aktuellen Fortschritts
 def print_status(message):
-    print("[Installation] " + message)
+    print("\033[92m[Installation]\033[0m " + message)  # Set color to green
 
 # Aktualisieren der Paketlisten für Upgrades für Pakete, die noch keine neuen Versionen haben.
 print_status("Aktualisiere Paketlisten...")
@@ -94,5 +94,12 @@ subprocess.run(["sudo", "/bin/systemctl", "start", "grafana-server"])
 subprocess.run(["sudo", "/bin/systemctl", "enable", "grafana-server"])
 
 # Abschluss der Installation
-print("Installation abgeschlossen.")
+print("\033[92mErfolgreich HoneyGuard Backend installiert! :)\033[0m")
 print("Sie können auf Grafana über http://<IP-Adresse des Raspberry Pi>:3000 zugreifen.")
+print("Verwenden Sie die folgenden Anmeldedaten für den ersten Login:")
+print("Benutzername: admin")
+print("Passwort: admin")
+print(" ")
+print(" ")
+print(" ")
+print("Mache jetzt einen Neustart um die Sensoren zu Inizialisieren! sudo reboot")

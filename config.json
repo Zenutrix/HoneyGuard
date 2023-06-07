@@ -6,23 +6,23 @@
     },
     "hx711": {
         "enabled": false,
-        "dout_pin": 5,
-        "pdsck_pin": 6,
-        "scale_ratio": 1,
-        "tare": -100
+        "dout_pin": 21,
+        "pdsck_pin": 20,
+        "scale_ratio": -7050,
+        "tare": -70550
     },
     "ds18b20": {
         "enabled": true,
-        "folder": "/sys/bus/w1/devices/"
+        "folder": "/sys/bus/w1/devices"
     },
     "bme680": {
-        "enabled": false
+        "enabled": true
     },
     "button": {
-        "pin": 12
-    },
-    "led": {
         "pin": 16
     },
-    "pausenzeit": 1
+    "led": {
+        "pin": 26
+    },
+    "loop_delay": 2
 }

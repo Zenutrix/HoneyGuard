@@ -6,7 +6,6 @@ import json
 import bme680
 from influxdb import InfluxDBClient
 from hx711 import HX711
-from datetime import datetime
 
 # Lade die Konfiguration aus der JSON-Datei
 with open('config.json') as f:
@@ -67,7 +66,7 @@ client.switch_database(influx_db)
 # HX711-Objekt initialisieren
 hx711 = None
 if hx711_enabled:
-    hx711 = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pdsck_pin)
+    hx711 = HX711(hx711_dout_pin, hx711_pdsck_pin)
     hx711.set_scale_ratio(scale_ratio)
     hx711.set_tare(tare)
 
@@ -115,14 +114,14 @@ while True:
                 bme680_humidity = sensor.data.humidity
                 bme680_gas_resistance = sensor.data.gas_resistance
 
-        # Aktuelle Zeitstempel erzeugen
-        timestamp = datetime.now().isoformat()
+        # Aktuellen Zeitstempel erzeugen (Unix-Zeit in Nanosekunden)
+        unix_timestamp_ns = int(time.time() * 10**9)
 
         # Messdaten in InfluxDB speichern, nur wenn mindestens ein Sensor aktiviert ist
         if weight is not None:
             weight_json = {
                 "measurement": "weight",
-                "time": timestamp,
+                "time": unix_timestamp_ns,
                 "fields": {
                     "value": weight
                 }
@@ -133,7 +132,7 @@ while True:
         for i, temperature in enumerate(temperatures):
             temp_json = {
                 "measurement": "temperature_sensor{}".format(i+1),
-                "time": timestamp,
+                "time": unix_timestamp_ns,
                 "fields": {
                     "value": temperature
                 }
@@ -144,7 +143,7 @@ while True:
         if bme680_temperature is not None:
             bme680_temp_json = {
                 "measurement": "bme680_temperature",
-                "time": timestamp,
+                "time": unix_timestamp_ns,
                 "fields": {
                     "value": bme680_temperature
                 }
@@ -154,7 +153,7 @@ while True:
 
             bme680_pressure_json = {
                 "measurement": "bme680_pressure",
-                "time": timestamp,
+                "time": unix_timestamp_ns,
                 "fields": {
                     "value": bme680_pressure
                 }
@@ -164,7 +163,7 @@ while True:
 
             bme680_humidity_json = {
                 "measurement": "bme680_humidity",
-                "time": timestamp,
+                "time": unix_timestamp_ns,
                 "fields": {
                     "value": bme680_humidity
                 }
@@ -174,7 +173,7 @@ while True:
 
             bme680_gas_resistance_json = {
                 "measurement": "bme680_gas_resistance",
-                "time": timestamp,
+                "time": unix_timestamp_ns,
                 "fields": {
                     "value": bme680_gas_resistance
                 }
@@ -182,31 +181,26 @@ while True:
             client.write_points([bme680_gas_resistance_json])
             logger.debug("BME680 gas resistance successfully written to InfluxDB.")
 
-        # LED steuern basierend auf dem Wartungsmodus
-        if led_status:
-            GPIO.output(led_pin, GPIO.LOW)
-        else:
-            GPIO.output(led_pin, GPIO.HIGH)
-
-    # Tasterstatus überprüfen
-    if GPIO.input(button_pin) == GPIO.LOW:
-        if button_pressed_start_time == 0:
+    # Überprüfen, ob der Taster gedrückt wurde
+    button_status = GPIO.input(button_pin)
+    if button_status == GPIO.LOW:
+        button_press_count += 1
+        if button_press_count == 1:
             button_pressed_start_time = time.time()
-        elif time.time() - button_pressed_start_time >= 3:
-            if button_press_count == 0:
-                button_press_count += 1
-            elif button_press_count == 1:
-                button_press_count = 0  # Zurücksetzen der Zählung
-                paused = not paused  # Pause umschalten
-                if paused:
-                    led_status = True  # LED einschalten
-                else:
-                    led_status = False  # LED ausschalten
-            button_pressed_start_time = 0
-            logger.debug("Button press count: %s", button_press_count)
-            logger.debug("Paused status: %s", paused)
-    else:
-        button_pressed_start_time = 0
+        else:
+            if (time.time() - button_pressed_start_time) < 2:
+                # Taster zweimal schnell hintereinander gedrückt: Programm beenden
+                logger.info("Button pressed twice in quick succession: exiting.")
+                break
+            else:
+                # Taster einmal gedrückt: Pause einlegen
+                button_press_count = 0
+                paused = not paused
+                logger.info("Button pressed: toggling pause state to %s.", paused)
 
-    # Eine Pause einfügen, um die Abfrageintervalle anzupassen
-    time.sleep(config['pausenzeit'])
+    # LED-Status aktualisieren
+    led_status = not led_status
+    GPIO.output(led_pin, led_status)
+
+    # Warten, bevor der nächste Zyklus startet
+    time.sleep(config['loop_delay'])

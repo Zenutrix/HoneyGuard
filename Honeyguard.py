@@ -6,7 +6,7 @@ import json
 import bme680
 from influxdb import InfluxDBClient
 from hx711 import HX711
-from datetime import datetime  # Hinzugefügt
+from datetime import datetime
 
 # Lade die Konfiguration aus der JSON-Datei
 with open('config.json') as f:
@@ -46,6 +46,13 @@ sensor = None
 if bme680_enabled:
     try:
         sensor = bme680.BME680()
+        sensor.set_humidity_oversample(bme680.OS_2X)
+        sensor.set_pressure_oversample(bme680.OS_4X)
+        sensor.set_temperature_oversample(bme680.OS_8X)
+        sensor.set_filter(bme680.FILTER_SIZE_3)
+        sensor.set_gas_status(bme680.ENABLE_GAS_MEAS)
+        sensor.set_gas_heater_temperature(320)
+        sensor.set_gas_heater_duration(150)
     except Exception as e:
         logger.error("Fehler beim Initialisieren des BME680-Sensors: %s", str(e))
 
@@ -100,16 +107,16 @@ while True:
         bme680_temperature = None
         bme680_pressure = None
         bme680_humidity = None
-        bme680_air_quality = None
+        bme680_gas_resistance = None
         if sensor:
-            if sensor.get_sensor_data() and sensor.data.heat_stable:
+            if sensor.get_sensor_data():
                 bme680_temperature = sensor.data.temperature
                 bme680_pressure = sensor.data.pressure
                 bme680_humidity = sensor.data.humidity
-                bme680_air_quality = sensor.data.air_quality_score
+                bme680_gas_resistance = sensor.data.gas_resistance
 
         # Aktuelle Zeitstempel erzeugen
-        timestamp = datetime.now().isoformat()  # Geändert
+        timestamp = datetime.now().isoformat()
 
         # Messdaten in InfluxDB speichern, nur wenn mindestens ein Sensor aktiviert ist
         if weight is not None:
@@ -135,18 +142,45 @@ while True:
             logger.debug("Temperature Sensor %s successfully written to InfluxDB.", i+1)
 
         if bme680_temperature is not None:
-            bme680_json = {
-                "measurement": "bme680",
+            bme680_temp_json = {
+                "measurement": "bme680_temperature",
                 "time": timestamp,
                 "fields": {
-                    "temperature": bme680_temperature,
-                    "pressure": bme680_pressure,
-                    "humidity": bme680_humidity,
-                    "air_quality": bme680_air_quality
+                    "value": bme680_temperature
                 }
             }
-            client.write_points([bme680_json])
-            logger.debug("BME680 data successfully written to InfluxDB.")
+            client.write_points([bme680_temp_json])
+            logger.debug("BME680 temperature successfully written to InfluxDB.")
+
+            bme680_pressure_json = {
+                "measurement": "bme680_pressure",
+                "time": timestamp,
+                "fields": {
+                    "value": bme680_pressure
+                }
+            }
+            client.write_points([bme680_pressure_json])
+            logger.debug("BME680 pressure successfully written to InfluxDB.")
+
+            bme680_humidity_json = {
+                "measurement": "bme680_humidity",
+                "time": timestamp,
+                "fields": {
+                    "value": bme680_humidity
+                }
+            }
+            client.write_points([bme680_humidity_json])
+            logger.debug("BME680 humidity successfully written to InfluxDB.")
+
+            bme680_gas_resistance_json = {
+                "measurement": "bme680_gas_resistance",
+                "time": timestamp,
+                "fields": {
+                    "value": bme680_gas_resistance
+                }
+            }
+            client.write_points([bme680_gas_resistance_json])
+            logger.debug("BME680 gas resistance successfully written to InfluxDB.")
 
         # LED steuern basierend auf dem Wartungsmodus
         if led_status:

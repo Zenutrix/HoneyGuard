@@ -1,7 +1,7 @@
 import json
 import time
 import logging
-from hx711py.hx711 import HX711
+from hx711 import HX711
 
 # Logger initialisieren
 logging.basicConfig(filename='sensor.log', level=logging.DEBUG)
@@ -30,9 +30,10 @@ def initialize_hx711(config):
     hx711_pdsck_pin = config['hx711']['pdsck_pin']
     hx711 = HX711(
         dout_pin=hx711_dout_pin,
-        pd_sck_pin=hx711_pdsck_pin
+        pd_sck_pin=hx711_pdsck_pin,
+        channel='A',
+        gain=64
     )
-    hx711.set_reading_format("LSB", "MSB")  # Set the reading format
     hx711.reset()  # Reset the HX711 sensor
     return hx711
 
@@ -41,7 +42,7 @@ def calibrate(hx711):
     hx711.tare()  # Reset the scale to 0
 
     weight = input("Place a known weight on the scale then enter its value in grams... ")
-    measures = [hx711.get_raw_data() for _ in range(5)]
+    measures = hx711.get_raw_data(times=5)
     raw_avg = sum(measures) / len(measures) if measures else None
 
     calibration_factor = float(weight) / raw_avg

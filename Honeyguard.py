@@ -45,11 +45,11 @@ def initialize_hx711(config):
         try:
             hx711_dout_pin = config['hx711']['dout_pin']
             hx711_pdsck_pin = config['hx711']['pdsck_pin']
-            scale_ratio = config['hx711']['scale_ratio']
-            tare = config['hx711']['tare']
             hx711 = HX711(hx711_dout_pin, hx711_pdsck_pin)
-            hx711.set_scale_ratio(scale_ratio)
-            hx711.set_tare(tare)
+            hx711.reset()  # Reset the HX711 sensor
+            hx711.set_reading_format("MSB")
+            hx711.set_reference_unit(1)  # Set the reference unit to 1 (you can adjust this value)
+            hx711.tare()  # Perform tare operation
             return hx711
         except KeyError as e:
             logger.error(f"Fehlende Konfiguration für HX711: {str(e)}")
@@ -93,6 +93,8 @@ def initialize_gpio(button_pin, led_pin):
 def read_weight(hx711):
     if hx711 and hx711.is_ready():
         weight = hx711.get_weight_mean(5)
+        # Perform scaling calculations here using the 'weight' value
+        # ...
         weight_json = {
             "measurement": "weight",
             "time": int(time.time() * 10**9),

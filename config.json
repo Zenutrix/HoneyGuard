@@ -8,8 +8,7 @@
       "enabled": true,
       "dout_pin": 5,
       "pdsck_pin": 6,
-      "scale_ratio": 123.45,
-      "tare": -100
+      "calibration_factor": 1.0
     },
     "ds18b20": {
       "enabled": true,

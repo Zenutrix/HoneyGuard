@@ -52,12 +52,15 @@ def initialize_hx711(config):
                 gain=64
             )
             hx711.reset()  # Reset the HX711 sensor
-            return hx711
+
+            calibration_factor = config['hx711'].get('calibration_factor', 1.0)  # Get calibration factor
+
+            return hx711, calibration_factor
         except KeyError as e:
             logger.error(f"Fehlende Konfiguration für HX711: {str(e)}")
         except Exception as e:
             logger.error(f"Fehler beim Initialisieren des HX711-Sensors: {str(e)}")
-    return None
+    return None, None
 
 def initialize_bme680(config):
     bme680_enabled = config.get('bme680', {}).get('enabled', False)
@@ -76,15 +79,6 @@ def initialize_bme680(config):
             logger.error(f"Fehler beim Initialisieren des BME680-Sensors: {str(e)}")
     return None
 
-def initialize_ds18b20(config):
-    ds18b20_enabled = config.get('ds18b20', {}).get('enabled', False)
-    if ds18b20_enabled:
-        ds18b20_folder = config.get('ds18b20', {}).get('folder', '')
-        if ds18b20_folder:
-            return ds18b20_folder
-        else:
-            logger.error("Fehlende Konfiguration für DS18B20: 'folder' nicht gefunden.")
-    return None
 
 def initialize_gpio(button_pin, led_pin):
     GPIO.setmode(GPIO.BCM)
@@ -92,14 +86,13 @@ def initialize_gpio(button_pin, led_pin):
     GPIO.setup(led_pin, GPIO.OUT)
     return GPIO
 
-def read_weight(hx711):
-    if hx711:
+def read_weight(hx711, calibration_factor):
+    if hx711 and calibration_factor:
         try:
             measures = hx711.get_raw_data(times=5)
-            weight = sum(measures) / len(measures) if measures else None
-            if weight is not None:
-                # Perform scaling calculations here using the 'weight' value
-                # ...
+            raw_avg = sum(measures) / len(measures) if measures else None
+            if raw_avg is not None:
+                weight = raw_avg * calibration_factor  # Scale the raw data
                 weight_json = {
                     "measurement": "weight",
                     "time": int(time.time() * 10**9),

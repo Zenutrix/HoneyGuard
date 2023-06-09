@@ -34,6 +34,8 @@ def calibrate():
     config['hx711']['scale_ratio'] = scale_ratio
 
     print("Now, please remove all weight from the scale.")
+    input("Press Enter when all weight has been removed...")
+    print("Calibration completed and values stored in config.json")
 
     # Read raw data from HX711 for tare
     tare_data = hx.get_raw_data(times=5)

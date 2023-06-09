@@ -45,10 +45,13 @@ def initialize_hx711(config):
         try:
             hx711_dout_pin = config['hx711']['dout_pin']
             hx711_pdsck_pin = config['hx711']['pdsck_pin']
-            hx711 = HX711(hx711_dout_pin, hx711_pdsck_pin)
+            hx711 = HX711(
+                dout_pin=hx711_dout_pin,
+                pd_sck_pin=hx711_pdsck_pin,
+                channel='A',
+                gain=64
+            )
             hx711.reset()  # Reset the HX711 sensor
-            hx711.set_reference_unit(1)  # Set the reference unit to 1 (you can adjust this value)
-            hx711.tare()  # Perform tare operation
             return hx711
         except KeyError as e:
             logger.error(f"Fehlende Konfiguration für HX711: {str(e)}")
@@ -90,19 +93,24 @@ def initialize_gpio(button_pin, led_pin):
     return GPIO
 
 def read_weight(hx711):
-    if hx711 and hx711.is_ready():
-        weight = hx711.get_weight_mean(5)
-        # Perform scaling calculations here using the 'weight' value
-        # ...
-        weight_json = {
-            "measurement": "weight",
-            "time": int(time.time() * 10**9),
-            "fields": {
-                "value": weight
-            }
-        }
-        client.write_points([weight_json])
-        logger.debug("Gewicht erfolgreich in InfluxDB gespeichert.")
+    if hx711:
+        try:
+            measures = hx711.get_raw_data(times=5)
+            weight = sum(measures) / len(measures) if measures else None
+            if weight is not None:
+                # Perform scaling calculations here using the 'weight' value
+                # ...
+                weight_json = {
+                    "measurement": "weight",
+                    "time": int(time.time() * 10**9),
+                    "fields": {
+                        "value": weight
+                    }
+                }
+                client.write_points([weight_json])
+                logger.debug("Gewicht erfolgreich in InfluxDB gespeichert.")
+        except Exception as e:
+            logger.error(f"Fehler beim Auslesen des Gewichts: {str(e)}")
 
 def read_temperatures(ds18b20_folder):
     if ds18b20_folder:

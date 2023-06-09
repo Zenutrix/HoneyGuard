@@ -47,7 +47,6 @@ def initialize_hx711(config):
             hx711_pdsck_pin = config['hx711']['pdsck_pin']
             hx711 = HX711(hx711_dout_pin, hx711_pdsck_pin)
             hx711.reset()  # Reset the HX711 sensor
-            hx711.set_reading_format("MSB")
             hx711.set_reference_unit(1)  # Set the reference unit to 1 (you can adjust this value)
             hx711.tare()  # Perform tare operation
             return hx711

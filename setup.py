@@ -69,9 +69,9 @@ print_status("Setze Berechtigungen für den Dienst...")
 subprocess.run(["sudo", "chmod", "644", "/etc/systemd/system/honeyguard.service"])
 
 # Starten des HoneyGuard-Dienstes und Aktivieren beim Boot
-print_status("Starte HoneyGuard-Dienst und aktiviere Autostart...")
-subprocess.run(["sudo", "systemctl", "start", "honeyguard"])
-subprocess.run(["sudo", "systemctl", "enable", "honeyguard"])
+#print_status("Starte HoneyGuard-Dienst und aktiviere Autostart...")
+#subprocess.run(["sudo", "systemctl", "start", "honeyguard"])
+#subprocess.run(["sudo", "systemctl", "enable", "honeyguard"])
 
 # Installation von Grafana
 print_status("Installiere Grafana...")

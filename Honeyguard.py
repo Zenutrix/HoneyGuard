@@ -92,19 +92,20 @@ def initialize_gpio(button_pin, led_pin):
     GPIO.setup(led_pin, GPIO.OUT)
     return GPIO
 
-def read_weight(hx711):
+def read_weight(hx711, scale_ratio, tare):
     if hx711:
         try:
             measures = hx711.get_raw_data(times=5)
             weight = sum(measures) / len(measures) if measures else None
             if weight is not None:
-                # Perform scaling calculations here using the 'weight' value
-                # ...
+                # Perform scaling calculations to convert raw value to kilograms
+                weight_kg = (weight - tare) / scale_ratio
+
                 weight_json = {
                     "measurement": "weight",
                     "time": int(time.time() * 10**9),
                     "fields": {
-                        "value": weight
+                        "value": weight_kg
                     }
                 }
                 client.write_points([weight_json])

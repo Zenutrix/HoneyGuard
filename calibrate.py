@@ -1,56 +1,32 @@
-import json
 from hx711 import HX711
+import RPi.GPIO as GPIO
 import time
+import json
 
-def calibrate():
-    # Load configuration
-    with open('config.json', 'r') as f:
-        config = json.load(f)
+def calibrate(config):
+    dout_pin = config['hx711']['dout_pin']
+    pd_sck_pin = config['hx711']['pdsck_pin']
 
-    # Create HX711 object
-    hx = HX711(
-        dout_pin=config['hx711']['dout_pin'],
-        pd_sck_pin=config['hx711']['pdsck_pin']
+    hx711 = HX711(
+        dout_pin=dout_pin,
+        pd_sck_pin=pd_sck_pin,
+        gain=64
     )
 
-    # Reset HX711
-    hx.reset()
-
-    print("Now, please put the known weight on the scale.")
-
-    # Read raw data from HX711
-    raw_data = hx.get_raw_data(times=5)
-
-    # Calculate average raw reading
-    average_raw = sum(raw_data) / len(raw_data)
-
-    # Ask for the weight of the known weight
-    known_weight = float(input("Please enter the weight of the known weight in grams: "))
-
-    # Calculate scale ratio
-    scale_ratio = average_raw / known_weight
-
-    # Update configuration with scale ratio
+    hx711.reset()
+    print("Platzieren Sie ein bekanntes Gewicht auf der Waage...")
+    time.sleep(5)
+    measures = hx711.get_raw_data(num_measures=5)
+    average = sum(measures) / len(measures)
+    known_weight = float(input("Bitte geben Sie das genaue Gewicht des Objekts ein: "))
+    scale_ratio = average / known_weight
     config['hx711']['scale_ratio'] = scale_ratio
-
-    print("Now, please remove all weight from the scale.")
-    input("Press Enter when all weight has been removed...")
-    print("Calibration completed and values stored in config.json")
-
-    # Read raw data from HX711 for tare
-    tare_data = hx.get_raw_data(times=5)
-
-    # Calculate average tare reading
-    average_tare = sum(tare_data) / len(tare_data)
-
-    # Update configuration with tare
-    config['hx711']['tare'] = -average_tare
-
-    # Save configuration
     with open('config.json', 'w') as f:
-        json.dump(config, f, indent=4)
-
-    print("Calibration completed and values stored in config.json")
+        json.dump(config, f)
+    print("Die Kalibrierung wurde abgeschlossen. Der Skalenverhältniswert wurde in der Konfigurationsdatei aktualisiert.")
+    GPIO.cleanup()
 
 if __name__ == "__main__":
-    calibrate()
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+    calibrate(config)

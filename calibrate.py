@@ -1,32 +1,65 @@
-from hx711 import HX711
-import RPi.GPIO as GPIO
-import time
 import json
+import time
+import logging
+from hx711py.hx711 import HX711
 
-def calibrate(config):
-    dout_pin = config['hx711']['dout_pin']
-    pd_sck_pin = config['hx711']['pdsck_pin']
+# Logger initialisieren
+logging.basicConfig(filename='sensor.log', level=logging.DEBUG)
+logger = logging.getLogger()
 
+def load_configuration(file_path):
+    try:
+        with open(file_path) as f:
+            config = json.load(f)
+            return config
+    except FileNotFoundError:
+        logger.error(f"Konfigurationsdatei '{file_path}' nicht gefunden.")
+    except json.JSONDecodeError:
+        logger.error(f"Ungültiges JSON-Format in der Konfigurationsdatei '{file_path}'.")
+    return None
+
+def save_configuration(file_path, config):
+    try:
+        with open(file_path, 'w') as f:
+            json.dump(config, f, indent=4)
+    except Exception as e:
+        logger.error(f"Fehler beim Speichern der Konfigurationsdatei: {str(e)}")
+
+def initialize_hx711(config):
+    hx711_dout_pin = config['hx711']['dout_pin']
+    hx711_pdsck_pin = config['hx711']['pdsck_pin']
     hx711 = HX711(
-        dout_pin=dout_pin,
-        pd_sck_pin=pd_sck_pin,
-        gain=64
+        dout_pin=hx711_dout_pin,
+        pd_sck_pin=hx711_pdsck_pin
     )
+    hx711.set_reading_format("LSB", "MSB")  # Set the reading format
+    hx711.reset()  # Reset the HX711 sensor
+    return hx711
 
-    hx711.reset()
-    print("Platzieren Sie ein bekanntes Gewicht auf der Waage...")
-    time.sleep(5)
-    measures = hx711.get_raw_data(num_measures=5)
-    average = sum(measures) / len(measures)
-    known_weight = float(input("Bitte geben Sie das genaue Gewicht des Objekts ein: "))
-    scale_ratio = average / known_weight
-    config['hx711']['scale_ratio'] = scale_ratio
-    with open('config.json', 'w') as f:
-        json.dump(config, f)
-    print("Die Kalibrierung wurde abgeschlossen. Der Skalenverhältniswert wurde in der Konfigurationsdatei aktualisiert.")
-    GPIO.cleanup()
+def calibrate(hx711):
+    input("Please ensure the scale is empty, then press Enter...")
+    hx711.tare()  # Reset the scale to 0
 
-if __name__ == "__main__":
-    with open('config.json', 'r') as f:
-        config = json.load(f)
-    calibrate(config)
+    weight = input("Place a known weight on the scale then enter its value in grams... ")
+    measures = [hx711.get_raw_data() for _ in range(5)]
+    raw_avg = sum(measures) / len(measures) if measures else None
+
+    calibration_factor = float(weight) / raw_avg
+    print(f"Calibration factor calculated: {calibration_factor}")
+    return calibration_factor
+
+if __name__ == '__main__':
+    config_file = 'config.json'
+    config = load_configuration(config_file)
+
+    if config is None:
+        logger.error("Unable to load the configuration file.")
+        exit()
+
+    hx711 = initialize_hx711(config)
+    calibration_factor = calibrate(hx711)
+
+    config['hx711']['calibration_factor'] = calibration_factor
+    save_configuration(config_file, config)
+
+    print("Calibration factor saved to 'config.json'.")

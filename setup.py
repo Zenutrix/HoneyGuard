@@ -27,9 +27,9 @@ subprocess.run(["sudo", "apt-get", "install", "-y", "python3-pip", "git", "i2c-t
 print_status("Installiere benötigte Python-Bibliotheken...")
 subprocess.run(["sudo", "pip3", "install", "RPi.GPIO", "influxdb", "bme680"])
 
-# Installieren der HX711-Bibliothek
-print_status("Installiere HX711-Bibliothek...")
-subprocess.run(["sudo", "pip3", "install", "HX711"])
+# Installieren der HX711py-Bibliothek
+print_status("Installiere HX711py-Bibliothek...")
+subprocess.run(["sudo", "pip3", "install", "HX711py"])
 
 # Festlegen des Installationsverzeichnisses
 install_dir = "/home/pi/HoneyGuard/"

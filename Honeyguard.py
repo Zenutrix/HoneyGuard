@@ -5,7 +5,7 @@ import glob
 import json
 import bme680
 from influxdb import InfluxDBClient
-from hx711 import HX711
+from hx711py import hx711
 import subprocess
 
 # Logger initialisieren
@@ -45,17 +45,11 @@ def initialize_hx711(config):
         try:
             hx711_dout_pin = config['hx711']['dout_pin']
             hx711_pdsck_pin = config['hx711']['pdsck_pin']
-            hx711 = HX711(
-                dout_pin=hx711_dout_pin,
-                pd_sck_pin=hx711_pdsck_pin,
-                channel='A',
-                gain=64
-            )
-            hx711.reset()  # Reset the HX711 sensor
+            hx = hx711.HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pdsck_pin)
 
             calibration_factor = config['hx711'].get('calibration_factor', 1.0)  # Get calibration factor
 
-            return hx711, calibration_factor
+            return hx, calibration_factor
         except KeyError as e:
             logger.error(f"Fehlende Konfiguration für HX711: {str(e)}")
         except Exception as e:
@@ -89,7 +83,7 @@ def initialize_gpio(button_pin, led_pin):
 def read_weight(hx711, calibration_factor):
     if hx711 and calibration_factor:
         try:
-            measures = hx711.get_raw_data(times=5)
+            measures = [hx711.read() for _ in range(5)]
             raw_avg = sum(measures) / len(measures) if measures else None
             if raw_avg is not None:
                 weight = raw_avg * calibration_factor  # Scale the raw data

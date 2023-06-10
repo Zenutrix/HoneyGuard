@@ -5,10 +5,10 @@
       "db": "sensor_data"
     },
     "hx711": {
-      "enabled": false,
+      "enabled": true,
       "dout_pin": 5,
       "pdsck_pin": 6,
-      "scale_ratio": 123.45,
+      "calibration_factor": 1234.5,
       "tare": -100
     },
     "ds18b20": {

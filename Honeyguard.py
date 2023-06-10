@@ -45,17 +45,20 @@ def initialize_hx711(config):
         try:
             hx711_dout_pin = config['hx711']['dout_pin']
             hx711_pdsck_pin = config['hx711']['pdsck_pin']
-            scale_ratio = config['hx711']['scale_ratio']
+            calibration_factor = config['hx711']['calibration_factor']
             tare = config['hx711']['tare']
             hx711 = HX711(hx711_dout_pin, hx711_pdsck_pin)
-            hx711.set_scale_ratio(scale_ratio)
-            hx711.set_tare(tare)
+            hx711.set_reading_format("MSB", "MSB")
+            hx711.set_reference_unit(calibration_factor)
+            hx711.reset()
+            hx711.tare()
             return hx711
         except KeyError as e:
             logger.error(f"Fehlende Konfiguration für HX711: {str(e)}")
         except Exception as e:
             logger.error(f"Fehler beim Initialisieren des HX711-Sensors: {str(e)}")
     return None
+
 
 def initialize_bme680(config):
     bme680_enabled = config.get('bme680', {}).get('enabled', False)
@@ -91,8 +94,10 @@ def initialize_gpio(button_pin, led_pin):
     return GPIO
 
 def read_weight(hx711):
-    if hx711 and hx711.is_ready():
-        weight = hx711.get_weight_mean(5)
+    if hx711:
+        weight = hx711.get_weight(5)
+        hx711.power_down()
+        hx711.power_up()
         weight_json = {
             "measurement": "weight",
             "time": int(time.time() * 10**9),

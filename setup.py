@@ -28,18 +28,18 @@ print_status("Installiere benötigte Python-Bibliotheken...")
 subprocess.run(["sudo", "pip3", "install", "RPi.GPIO", "influxdb", "bme680"])
 
 # Klonen des HX711-Bibliotheksrepositorys
-print_status("Klonen des HX711-Bibliotheksrepositorys...")
-subprocess.run(["git", "clone", "https://github.com/tatobari/hx711py.git"])
+#print_status("Klonen des HX711-Bibliotheksrepositorys...")
+#subprocess.run(["git", "clone", "https://github.com/tatobari/hx711py.git"])
 
 # Wechseln in das geklonte Verzeichnis
-os.chdir("hx711py")
+#os.chdir("hx711py")
 
 # Installieren der Bibliothek
-print_status("Installiere HX711-Bibliothek...")
-subprocess.run(["sudo", "python3", "setup.py", "install"])
+#print_status("Installiere HX711-Bibliothek...")
+#subprocess.run(["sudo", "python3", "setup.py", "install"])
 
 # Zurück zum ursprünglichen Verzeichnis
-os.chdir("..")
+#os.chdir("..")
 
 # Festlegen des Installationsverzeichnisses
 install_dir = "/home/pi/HoneyGuard/"

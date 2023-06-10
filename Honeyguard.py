@@ -5,7 +5,7 @@ import glob
 import json
 import bme680
 from influxdb import InfluxDBClient
-from hx711 import HX711 
+from hx711 import HX711
 import subprocess
 
 # Logger initialisieren
@@ -45,31 +45,16 @@ def initialize_hx711(config):
         try:
             hx711_dout_pin = config['hx711']['dout_pin']
             hx711_pdsck_pin = config['hx711']['pdsck_pin']
-            hx = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pdsck_pin)
-
-            calibration_factor = config['hx711'].get('calibration_factor', 1.0)  # Get calibration factor
-
-            hx.set_reading_format("MSB", "MSB")  # Setzen Sie das Leseverfahren
-            hx.set_reference_unit(calibration_factor)  # Setzen Sie den Kalibrierungsfaktor
-
-            hx.reset()  # Zurücksetzen des HX711
-            hx.tare()  # Tarieren des HX711
-
-            return hx
+            scale_ratio = config['hx711']['scale_ratio']
+            tare = config['hx711']['tare']
+            hx711 = HX711(hx711_dout_pin, hx711_pdsck_pin)
+            hx711.set_scale_ratio(scale_ratio)
+            hx711.set_tare(tare)
+            return hx711
         except KeyError as e:
             logger.error(f"Fehlende Konfiguration für HX711: {str(e)}")
         except Exception as e:
             logger.error(f"Fehler beim Initialisieren des HX711-Sensors: {str(e)}")
-    return None
-
-def initialize_ds18b20(config):
-    ds18b20_enabled = config.get('ds18b20', {}).get('enabled', False)
-    if ds18b20_enabled:
-        try:
-            # Hier initialisieren Sie den DS18B20-Sensor
-            # und geben gegebenenfalls ein Objekt zurück, das den Sensor repräsentiert
-            except Exception as e:
-            logger.error(f"Fehler beim Initialisieren des DS18B20-Sensors: {str(e)}")
     return None
 
 def initialize_bme680(config):
@@ -89,6 +74,15 @@ def initialize_bme680(config):
             logger.error(f"Fehler beim Initialisieren des BME680-Sensors: {str(e)}")
     return None
 
+def initialize_ds18b20(config):
+    ds18b20_enabled = config.get('ds18b20', {}).get('enabled', False)
+    if ds18b20_enabled:
+        ds18b20_folder = config.get('ds18b20', {}).get('folder', '')
+        if ds18b20_folder:
+            return ds18b20_folder
+        else:
+            logger.error("Fehlende Konfiguration für DS18B20: 'folder' nicht gefunden.")
+    return None
 
 def initialize_gpio(button_pin, led_pin):
     GPIO.setmode(GPIO.BCM)
@@ -97,22 +91,17 @@ def initialize_gpio(button_pin, led_pin):
     return GPIO
 
 def read_weight(hx711):
-    if hx711:
-        try:
-            val = hx711.get_weight(5)  # Messen Sie das Gewicht
-            hx711.power_down()  # Schalten Sie den HX711 aus
-            hx711.power_up()  # Schalten Sie den HX711 wieder ein
-            weight_json = {
-                "measurement": "weight",
-                "time": int(time.time() * 10**9),
-                "fields": {
-                    "value": val
-                }
+    if hx711 and hx711.is_ready():
+        weight = hx711.get_weight_mean(5)
+        weight_json = {
+            "measurement": "weight",
+            "time": int(time.time() * 10**9),
+            "fields": {
+                "value": weight
             }
-            client.write_points([weight_json])
-            logger.debug("Gewicht erfolgreich in InfluxDB gespeichert.")
-        except Exception as e:
-            logger.error(f"Fehler beim Auslesen des Gewichts: {str(e)}")
+        }
+        client.write_points([weight_json])
+        logger.debug("Gewicht erfolgreich in InfluxDB gespeichert.")
 
 def read_temperatures(ds18b20_folder):
     if ds18b20_folder:
@@ -234,6 +223,8 @@ if __name__ == '__main__':
     client = initialize_influxdb_client(config)
     if client is None:
         exit()
+
+    hx711 = initialize_hx711(config)
     sensor = initialize_bme680(config)
     ds18b20_folder = initialize_ds18b20(config)
 

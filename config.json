@@ -7,9 +7,9 @@
     "hx711": {
       "enabled": true,
       "dout_pin": 5,
-      "pdsck_pin": 6,
-      "calibration_factor": 1234.5,
-      "tare": -100
+      "pd_sck_pin": 6,
+      "reference_unit": 1,
+      "channel": "A"
     },
     "ds18b20": {
       "enabled": true,

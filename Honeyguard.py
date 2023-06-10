@@ -5,7 +5,6 @@ import glob
 import json
 import bme680
 from influxdb import InfluxDBClient
-from hx711 import HX711
 import subprocess
 
 # Logger initialisieren
@@ -40,23 +39,21 @@ def initialize_influxdb_client(config):
     return None
 
 def initialize_hx711(config):
-    hx711_enabled = config['hx711']['enabled']
+    hx711_enabled = config.get('hx711', {}).get('enabled', False)
     if hx711_enabled:
-        try:
-            hx711_dout_pin = config['hx711']['dout_pin']
-            hx711_pdsck_pin = config['hx711']['pdsck_pin']
-            calibration_factor = config['hx711']['calibration_factor']
-            tare = config['hx711']['tare']
-            hx711 = HX711(hx711_dout_pin, hx711_pdsck_pin)
-            hx711.set_reading_format("MSB", "MSB")
-            hx711.set_reference_unit(calibration_factor)
-            hx711.reset()
-            hx711.tare()
-            return hx711
-        except KeyError as e:
-            logger.error(f"Fehlende Konfiguration für HX711: {str(e)}")
-        except Exception as e:
-            logger.error(f"Fehler beim Initialisieren des HX711-Sensors: {str(e)}")
+        hx711_dout_pin = config['hx711']['dout_pin']
+        hx711_pd_sck_pin = config['hx711']['pd_sck_pin']
+        hx711_reference_unit = config['hx711'].get('reference_unit', 1)
+
+        hx711 = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pd_sck_pin)
+        hx711.set_reading_format("MSB", "MSB")
+        hx711.set_reference_unit(hx711_reference_unit)
+
+        hx711.reset()
+        hx711.tare()
+
+        return hx711
+
     return None
 
 
@@ -94,10 +91,11 @@ def initialize_gpio(button_pin, led_pin):
     return GPIO
 
 def read_weight(hx711):
-    if hx711:
-        weight = hx711.get_weight(5)
+    if hx711 is not None:
+        weight = hx711.get_weight_mean()
         hx711.power_down()
         hx711.power_up()
+
         weight_json = {
             "measurement": "weight",
             "time": int(time.time() * 10**9),
@@ -214,9 +212,9 @@ def button_press_handler(channel):
 def main_loop():
     while True:
         if not paused:
-            read_weight(hx711)
             read_temperatures(ds18b20_folder)
             read_bme680(sensor)
+            read_weight(hx711)
 
         time.sleep(config['loop_delay'])
 
@@ -229,9 +227,9 @@ if __name__ == '__main__':
     if client is None:
         exit()
 
-    hx711 = initialize_hx711(config)
     sensor = initialize_bme680(config)
     ds18b20_folder = initialize_ds18b20(config)
+    hx711 = initialize_hx711(config)
 
     button_pin = config['button']['pin']
     led_pin = config['led']['pin']

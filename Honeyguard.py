@@ -5,6 +5,7 @@ import glob
 import json
 import bme680
 from influxdb import InfluxDBClient
+from hx711 import HX711
 import subprocess
 
 # Logger initialisieren

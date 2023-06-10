@@ -3,9 +3,8 @@ import logging
 import RPi.GPIO as GPIO
 import glob
 import json
-import bme680
-from influxdb import InfluxDBClient
 from hx711 import HX711
+from influxdb import InfluxDBClient
 import subprocess
 
 # Logger initialisieren
@@ -39,42 +38,6 @@ def initialize_influxdb_client(config):
         logger.error(f"Fehler beim Initialisieren des InfluxDB-Clients: {str(e)}")
     return None
 
-def initialize_hx711(config):
-    hx711_enabled = config.get('hx711', {}).get('enabled', False)
-    if hx711_enabled:
-        hx711_dout_pin = config['hx711']['dout_pin']
-        hx711_pd_sck_pin = config['hx711']['pd_sck_pin']
-        hx711_reference_unit = config['hx711'].get('reference_unit', 1)
-        hx711_channel = config['hx711'].get('channel', 'A')
-
-        hx711 = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pd_sck_pin, channel=hx711_channel)
-        hx711.set_reading_format("MSB", "MSB")
-        hx711.set_reference_unit(hx711_reference_unit)
-
-        hx711.reset()
-        hx711.tare()
-
-        return hx711
-
-    return None
-
-def initialize_bme680(config):
-    bme680_enabled = config.get('bme680', {}).get('enabled', False)
-    if bme680_enabled:
-        try:
-            sensor = bme680.BME680()
-            sensor.set_humidity_oversample(bme680.OS_2X)
-            sensor.set_pressure_oversample(bme680.OS_4X)
-            sensor.set_temperature_oversample(bme680.OS_8X)
-            sensor.set_filter(bme680.FILTER_SIZE_3)
-            sensor.set_gas_status(bme680.ENABLE_GAS_MEAS)
-            sensor.set_gas_heater_temperature(320)
-            sensor.set_gas_heater_duration(150)
-            return sensor
-        except Exception as e:
-            logger.error(f"Fehler beim Initialisieren des BME680-Sensors: {str(e)}")
-    return None
-
 def initialize_ds18b20(config):
     ds18b20_enabled = config.get('ds18b20', {}).get('enabled', False)
     if ds18b20_enabled:
@@ -90,24 +53,6 @@ def initialize_gpio(button_pin, led_pin):
     GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(led_pin, GPIO.OUT)
     return GPIO
-
-def read_weight(hx711):
-    if hx711 is not None:
-        weight = hx711.get_weight_mean()
-        hx711.power_down()
-        hx711.power_up()
-
-        hx711_channel = hx711.get_channel()
-
-        weight_json = {
-            "measurement": f"hx711_weight_{hx711_channel}",
-            "time": int(time.time() * 10**9),
-            "fields": {
-                "value": weight
-            }
-        }
-        client.write_points([weight_json])
-        logger.debug("Gewicht erfolgreich in InfluxDB gespeichert.")
 
 def read_temperatures(ds18b20_folder):
     if ds18b20_folder:
@@ -131,52 +76,38 @@ def read_temperatures(ds18b20_folder):
                     client.write_points([temp_json])
                     logger.debug("Temperatursensor %s erfolgreich in InfluxDB gespeichert.", i+1)
 
-def read_bme680(sensor):
-    if sensor and sensor.get_sensor_data():
-        bme680_temperature = sensor.data.temperature
-        bme680_pressure = sensor.data.pressure
-        bme680_humidity = sensor.data.humidity
-        bme680_gas_resistance = sensor.data.gas_resistance
+def initialize_hx711(config):
+    hx711_enabled = config.get('hx711', {}).get('enabled', False)
+    if hx711_enabled:
+        hx711_dout_pin = config['hx711']['dout_pin']
+        hx711_pd_sck_pin = config['hx711']['pd_sck_pin']
+        hx711_channel = config['hx711']['channel']
 
-        bme680_temp_json = {
-            "measurement": "bme680_temperature",
+        hx711 = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pd_sck_pin)
+        hx711.set_reading_format("MSB", "MSB")
+        hx711.set_reference_unit(1)
+        hx711.reset()
+        hx711.tare()
+
+        return hx711
+
+    return None
+
+def read_weight(hx711):
+    if hx711 is not None:
+        weight = hx711.get_weight_mean()
+        hx711.power_down()
+        hx711.power_up()
+
+        weight_json = {
+            "measurement": "weight",
             "time": int(time.time() * 10**9),
             "fields": {
-                "value": bme680_temperature
+                "value": weight
             }
         }
-        client.write_points([bme680_temp_json])
-        logger.debug("BME680-Temperatur erfolgreich in InfluxDB gespeichert.")
-
-        bme680_pressure_json = {
-            "measurement": "bme680_pressure",
-            "time": int(time.time() * 10**9),
-            "fields": {
-                "value": bme680_pressure
-            }
-        }
-        client.write_points([bme680_pressure_json])
-        logger.debug("BME680-Druck erfolgreich in InfluxDB gespeichert.")
-
-        bme680_humidity_json = {
-            "measurement": "bme680_humidity",
-            "time": int(time.time() * 10**9),
-            "fields": {
-                "value": bme680_humidity
-            }
-        }
-        client.write_points([bme680_humidity_json])
-        logger.debug("BME680-Feuchtigkeit erfolgreich in InfluxDB gespeichert.")
-
-        bme680_gas_resistance_json = {
-            "measurement": "bme680_gas_resistance",
-            "time": int(time.time() * 10**9),
-            "fields": {
-                "value": bme680_gas_resistance
-            }
-        }
-        client.write_points([bme680_gas_resistance_json])
-        logger.debug("BME680-Gaswiderstand erfolgreich in InfluxDB gespeichert.")
+        client.write_points([weight_json])
+        logger.debug("Gewicht erfolgreich in InfluxDB gespeichert.")
 
 def toggle_pause_state():
     global paused
@@ -216,7 +147,6 @@ def main_loop():
     while True:
         if not paused:
             read_temperatures(ds18b20_folder)
-            read_bme680(sensor)
             read_weight(hx711)
 
         time.sleep(config['loop_delay'])
@@ -230,7 +160,6 @@ if __name__ == '__main__':
     if client is None:
         exit()
 
-    sensor = initialize_bme680(config)
     ds18b20_folder = initialize_ds18b20(config)
     hx711 = initialize_hx711(config)
 

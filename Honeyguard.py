@@ -5,7 +5,7 @@ import glob
 import json
 import bme680
 from influxdb import InfluxDBClient
-from hx711py import hx711
+from hx711 import HX711 
 import subprocess
 
 # Logger initialisieren
@@ -45,16 +45,22 @@ def initialize_hx711(config):
         try:
             hx711_dout_pin = config['hx711']['dout_pin']
             hx711_pdsck_pin = config['hx711']['pdsck_pin']
-            hx = hx711.HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pdsck_pin)
+            hx = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pdsck_pin)
 
             calibration_factor = config['hx711'].get('calibration_factor', 1.0)  # Get calibration factor
 
-            return hx, calibration_factor
+            hx.set_reading_format("MSB", "MSB")  # Setzen Sie das Leseverfahren
+            hx.set_reference_unit(calibration_factor)  # Setzen Sie den Kalibrierungsfaktor
+
+            hx.reset()  # Zurücksetzen des HX711
+            hx.tare()  # Tarieren des HX711
+
+            return hx
         except KeyError as e:
             logger.error(f"Fehlende Konfiguration für HX711: {str(e)}")
         except Exception as e:
             logger.error(f"Fehler beim Initialisieren des HX711-Sensors: {str(e)}")
-    return None, None
+    return None
 
 def initialize_bme680(config):
     bme680_enabled = config.get('bme680', {}).get('enabled', False)
@@ -80,22 +86,21 @@ def initialize_gpio(button_pin, led_pin):
     GPIO.setup(led_pin, GPIO.OUT)
     return GPIO
 
-def read_weight(hx711, calibration_factor):
-    if hx711 and calibration_factor:
+def read_weight(hx711):
+    if hx711:
         try:
-            measures = [hx711.read() for _ in range(5)]
-            raw_avg = sum(measures) / len(measures) if measures else None
-            if raw_avg is not None:
-                weight = raw_avg * calibration_factor  # Scale the raw data
-                weight_json = {
-                    "measurement": "weight",
-                    "time": int(time.time() * 10**9),
-                    "fields": {
-                        "value": weight
-                    }
+            val = hx711.get_weight(5)  # Messen Sie das Gewicht
+            hx711.power_down()  # Schalten Sie den HX711 aus
+            hx711.power_up()  # Schalten Sie den HX711 wieder ein
+            weight_json = {
+                "measurement": "weight",
+                "time": int(time.time() * 10**9),
+                "fields": {
+                    "value": val
                 }
-                client.write_points([weight_json])
-                logger.debug("Gewicht erfolgreich in InfluxDB gespeichert.")
+            }
+            client.write_points([weight_json])
+            logger.debug("Gewicht erfolgreich in InfluxDB gespeichert.")
         except Exception as e:
             logger.error(f"Fehler beim Auslesen des Gewichts: {str(e)}")
 
@@ -219,8 +224,6 @@ if __name__ == '__main__':
     client = initialize_influxdb_client(config)
     if client is None:
         exit()
-
-    hx711 = initialize_hx711(config)
     sensor = initialize_bme680(config)
     ds18b20_folder = initialize_ds18b20(config)
 

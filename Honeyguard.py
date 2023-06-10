@@ -62,6 +62,16 @@ def initialize_hx711(config):
             logger.error(f"Fehler beim Initialisieren des HX711-Sensors: {str(e)}")
     return None
 
+def initialize_ds18b20(config):
+    ds18b20_enabled = config.get('ds18b20', {}).get('enabled', False)
+    if ds18b20_enabled:
+        try:
+            # Hier initialisieren Sie den DS18B20-Sensor
+            # und geben gegebenenfalls ein Objekt zurück, das den Sensor repräsentiert
+        except Exception as e:
+            logger.error(f"Fehler beim Initialisieren des DS18B20-Sensors: {str(e)}")
+    return None
+
 def initialize_bme680(config):
     bme680_enabled = config.get('bme680', {}).get('enabled', False)
     if bme680_enabled:

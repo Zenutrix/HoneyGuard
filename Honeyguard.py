@@ -68,7 +68,7 @@ def initialize_ds18b20(config):
         try:
             # Hier initialisieren Sie den DS18B20-Sensor
             # und geben gegebenenfalls ein Objekt zurück, das den Sensor repräsentiert
-        except Exception as e:
+            except Exception as e:
             logger.error(f"Fehler beim Initialisieren des DS18B20-Sensors: {str(e)}")
     return None
 

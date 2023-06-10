@@ -5,11 +5,12 @@
       "db": "sensor_data"
     },
     "hx711": {
-      "enabled": true,
-      "dout_pin": 21,
-      "pdsck_pin": 20,
-      "calibration_factor": 742.32
-  },
+      "enabled": false,
+      "dout_pin": 5,
+      "pdsck_pin": 6,
+      "scale_ratio": 123.45,
+      "tare": -100
+    },
     "ds18b20": {
       "enabled": true,
       "folder": "/sys/bus/w1/devices"

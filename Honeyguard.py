@@ -44,8 +44,9 @@ def initialize_hx711(config):
         hx711_dout_pin = config['hx711']['dout_pin']
         hx711_pd_sck_pin = config['hx711']['pd_sck_pin']
         hx711_reference_unit = config['hx711'].get('reference_unit', 1)
+        hx711_channel = config['hx711'].get('channel', 'A')
 
-        hx711 = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pd_sck_pin)
+        hx711 = HX711(dout_pin=hx711_dout_pin, pd_sck_pin=hx711_pd_sck_pin, channel=hx711_channel)
         hx711.set_reading_format("MSB", "MSB")
         hx711.set_reference_unit(hx711_reference_unit)
 
@@ -55,7 +56,6 @@ def initialize_hx711(config):
         return hx711
 
     return None
-
 
 def initialize_bme680(config):
     bme680_enabled = config.get('bme680', {}).get('enabled', False)
@@ -96,8 +96,10 @@ def read_weight(hx711):
         hx711.power_down()
         hx711.power_up()
 
+        hx711_channel = hx711.get_channel()
+
         weight_json = {
-            "measurement": "weight",
+            "measurement": f"hx711_weight_{hx711_channel}",
             "time": int(time.time() * 10**9),
             "fields": {
                 "value": weight
